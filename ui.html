@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ApexCharts → SVG 2</title>
+  <link href="https://fonts.googleapis.com/css2?family=Anek+Latin:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Anek Latin', Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans"; margin: 0; }
+    header { padding: 12px 16px; border-bottom: 1px solid #E5E7EB; }
+    .wrap { padding: 12px 16px; }
+    .row { display:flex; gap:8px; align-items:center; margin:8px 0; }
+    label { width: 130px; font-size: 12px; color: #374151; }
+    input, select, textarea { flex: 1; font-size: 12px; padding: 6px 8px; }
+    #preview { border: 1px solid #E5E7EB; border-radius: 8px; padding: 8px; margin-top: 8px; }
+    button { padding: 8px 10px; font-size: 12px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+</head>
+<body>
+  <header><strong>ApexCharts → SVG</strong></header>
+  <div class="wrap">
+    <div class="row">
+      <label for="title">Chart title</label>
+      <input id="title" placeholder="e.g., Monthly VFACTS Sales" />
+    </div>
+
+    <div class="row">
+      <label for="type">Type</label>
+      <select id="type">
+        <option value="line">Line</option>
+        <option value="bar">Bar</option>
+        <option value="area">Area</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <label for="width">Width (px)</label>
+      <input id="width" type="number" placeholder="600" />
+    </div>
+    <div class="row">
+      <label for="height">Height (px)</label>
+      <input id="height" type="number" placeholder="400" />
+    </div>
+
+
+    <div class="row">
+      <label for="showLegend">Show legend</label>
+      <input id="showLegend" type="checkbox" checked />
+    </div>
+
+    <div class="row">
+      <label for="data">Data (JSON)</label>
+      <textarea id="data" rows="6" placeholder='{"categories":["Sep 2024","Oct 2024"],"series":[{"name":"Ford Ranger (Current 12 months)","data":[5200,4950]},{"name":"Ford Ranger (Previous 12 months)","data":[4700,4600]}]}'>{"categories":["Jan","Feb","Mar","Apr","May"],"series":[{"name":"Sales","data":[1200,1900,3000,5000,4000]},{"name":"Revenue","data":[1000,1500,2500,4200,3800]}]}</textarea>
+    </div>
+
+    <div class="row">
+      <button id="render">Render preview</button>
+      <button id="insert">Insert into Figma</button>
+    </div>
+
+    <div id="preview"></div>
+  </div>
+
+  <script>
+    // ── Brand tokens (edit once, used everywhere) ────────────────────────────
+    var BRAND = {
+      fontFamily: "'Anek Latin', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+      foreColor: "#0F172A",     // text
+      axisColor: "#334155",     // axis/labels
+      subtitleColor: "#475569",
+      gridColor: "#E2E8F0",
+      palette: ["#E11D48","#7D7D83","#22C55E","#F59E0B","#8B5CF6","#10B981","#F43F5E"],
+      sizes: { label: "12px", legend: "12px", title: "16px", subtitle: "12px", dataLabel: "12px" },
+      weights: { label: 400, legend: 500, title: 600, subtitle: 500, dataLabel: 600 }
+    };
+
+    var chart = null;
+
+    function parseData(raw) {
+      try { return JSON.parse(raw); } catch(e) { return null; }
+    }
+
+    // ── Branded defaults (keeps width/height support) ───────────────────────
+    function baseOptions() {
+      var type = document.getElementById('type').value;
+      var width = parseInt(document.getElementById('width').value, 10) || 600;
+      var height = parseInt(document.getElementById('height').value, 10) || 400;
+
+      return {
+        chart: {
+          type: type,
+          width: width,
+          height: height,
+          fontFamily: BRAND.fontFamily,
+          foreColor: BRAND.foreColor,
+          animations: { enabled: false },
+          toolbar: { show: false }
+        },
+        colors: BRAND.palette,
+
+        title: {
+          text: document.getElementById('title').value || "",
+          style: {
+            fontSize: BRAND.sizes.title,
+            fontWeight: BRAND.weights.title,
+            fontFamily: BRAND.fontFamily,
+            color: BRAND.foreColor
+          }
+        },
+        subtitle: {
+          text: "",
+          style: {
+            fontSize: BRAND.sizes.subtitle,
+            fontWeight: BRAND.weights.subtitle,
+            fontFamily: BRAND.fontFamily,
+            color: BRAND.subtitleColor
+          }
+        },
+
+        xaxis: {
+          categories: [],
+          axisBorder: { show: true, color: BRAND.gridColor },
+          axisTicks:  { show: true, color: BRAND.gridColor },
+          crosshairs: {
+            show: false
+          },
+          labels: {
+            style: {
+              colors: BRAND.axisColor,
+              fontSize: BRAND.sizes.label,
+              fontFamily: BRAND.fontFamily,
+              fontWeight: BRAND.weights.label
+            }
+          }
+        },
+        yaxis: {
+          crosshairs: {
+            show: false
+          },
+          labels: {
+            formatter: function(v){ return Number(v).toLocaleString(); },
+            style: {
+              colors: BRAND.axisColor,
+              fontSize: BRAND.sizes.label,
+              fontFamily: BRAND.fontFamily,
+              fontWeight: BRAND.weights.label
+            }
+          }
+        },
+
+        grid: { 
+          borderColor: BRAND.gridColor, 
+          strokeDashArray: 3, 
+          padding: { left: 8, right: 8 },
+          xaxis: {
+            lines: {
+              show: false
+            }
+          }
+        },
+        stroke: { width: (type === "bar" ? 0 : 2), lineCap: "round" },
+        markers: { size: ((type === "line" || type === "area") ? 3 : 0), strokeWidth: 2, strokeColors: "#fff" },
+
+        plotOptions: {
+          bar: { columnWidth: "55%", borderRadius: 6 },
+          area: { fillTo: "origin" }
+        },
+        fill: {
+          type: "solid",
+          opacity: (type === "area" ? 0.18 : 1)
+        },
+
+        dataLabels: {
+          enabled: false,
+          style: {
+            fontSize: BRAND.sizes.dataLabel,
+            fontFamily: BRAND.fontFamily,
+            fontWeight: BRAND.weights.dataLabel,
+            colors: [BRAND.foreColor]
+          }
+        },
+
+        legend: {
+          show: true,
+          position: "bottom",
+          horizontalAlign: "center",
+          fontSize: BRAND.sizes.legend,
+          fontFamily: BRAND.fontFamily,
+          fontWeight: BRAND.weights.legend,
+          markers: { 
+            radius: 3,
+            strokeWidth: 0,
+            strokeColor: '#fff'
+          },
+          itemMargin: {
+            horizontal: 10,
+            vertical: 5
+          },
+          offsetY: 5
+        },
+
+        tooltip: {
+          theme: "light",
+          style: { fontSize: BRAND.sizes.label, fontFamily: BRAND.fontFamily },
+          x: { formatter: function(val){ return val; } },
+          y: { formatter: function(v){ return Number(v).toLocaleString(); } },
+          enabled: true,
+          shared: true,
+          intersect: false,
+          followCursor: false,
+          custom: undefined,
+          crosshairs: {
+            show: false
+          }
+        },
+
+        series: []
+      };
+    }
+
+    async function render() {
+      var json = parseData(document.getElementById('data').value);
+      if (!json || !Array.isArray(json.series)) {
+        parent.postMessage({ pluginMessage: { type: 'notify', message: 'Invalid JSON: expected { categories, series }' } }, '*');
+        return;
+      }
+
+      var options = baseOptions();
+      options.series = json.series;
+      options.xaxis.categories = json.categories || [];
+      
+      // Show legend based on user preference and data
+      var legendCheckbox = document.getElementById('showLegend').checked;
+      var hasMultipleSeriesOrNames = json.series.length > 1 || (json.series.length === 1 && json.series[0].name);
+      var showLegend = legendCheckbox && hasMultipleSeriesOrNames;
+      options.legend.show = showLegend;
+
+      var el = document.getElementById('preview');
+      el.innerHTML = '';
+      chart = new ApexCharts(el, options);
+      await chart.render();
+      
+      // Debug: Check if legend was rendered
+      setTimeout(function() {
+        var svg = document.querySelector('#preview svg');
+        var previewDiv = document.querySelector('#preview');
+        
+        if (svg) {
+          var legendElements = svg.querySelectorAll('.apexcharts-legend, .apexcharts-legend-series, .apexcharts-legend-text');
+          console.log('After render - Legend elements in SVG:', legendElements.length);
+          
+          // Check if legend exists outside SVG in the preview div
+          var legendOutsideSvg = previewDiv.querySelectorAll('.apexcharts-legend, .apexcharts-legend-series, .apexcharts-legend-text');
+          console.log('Legend elements outside SVG:', legendOutsideSvg.length);
+          
+          console.log('Legend show setting:', showLegend);
+          console.log('Series count:', json.series.length);
+          if (json.series.length > 0) {
+            console.log('Series names:', json.series.map(s => s.name));
+          }
+          
+          // Log all elements in preview to see what's there
+          console.log('All elements in preview:', previewDiv.children.length);
+          for (var i = 0; i < previewDiv.children.length; i++) {
+            console.log('Child', i, ':', previewDiv.children[i].tagName, previewDiv.children[i].className);
+          }
+        }
+      }, 100);
+
+    }
+
+
+    function createManualLegend(svgClone, seriesData) {
+      if (!seriesData || seriesData.length === 0) return;
+      
+      // Only create legend if we have multiple series or single series with a name
+      var shouldCreateLegend = seriesData.length > 1 || (seriesData.length === 1 && seriesData[0].name);
+      if (!shouldCreateLegend) return;
+      
+      // Get SVG dimensions
+      var svgWidth = parseFloat(svgClone.getAttribute('width')) || 600;
+      var svgHeight = parseFloat(svgClone.getAttribute('height')) || 400;
+      
+      // Calculate legend dimensions
+      var itemWidth = 120; // Approximate width per legend item
+      var itemHeight = 20;
+      var itemSpacing = 10;
+      
+      // Filter series with names
+      var namedSeries = seriesData.filter(function(series) { return series.name; });
+      var legendWidth = namedSeries.length * itemWidth;
+      var legendHeight = itemHeight;
+      
+      // Position legend at bottom center with proper spacing from x-axis
+      var legendX = (svgWidth - legendWidth) / 2;
+      var legendY = svgHeight - 25; // Moved down a tad - closer to bottom edge
+      
+      // Create legend group
+      var legendGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      legendGroup.setAttribute('class', 'manual-legend');
+      legendGroup.setAttribute('transform', 'translate(' + legendX + ', ' + legendY + ')');
+      
+      var currentX = 0;
+      
+      namedSeries.forEach(function(series, index) {
+        // Create legend item group
+        var itemGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        itemGroup.setAttribute('transform', 'translate(' + currentX + ', 0)');
+        
+        // Create legend marker (circle)
+        var marker = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        marker.setAttribute('cx', '6');
+        marker.setAttribute('cy', '10');
+        marker.setAttribute('r', '3');
+        marker.setAttribute('fill', BRAND.palette[index % BRAND.palette.length]);
+        
+        // Create legend text
+        var text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', '16');
+        text.setAttribute('y', '14');
+        text.setAttribute('font-family', BRAND.fontFamily);
+        text.setAttribute('font-size', BRAND.sizes.legend);
+        text.setAttribute('font-weight', BRAND.weights.legend);
+        text.setAttribute('fill', BRAND.foreColor);
+        text.textContent = series.name;
+        
+        itemGroup.appendChild(marker);
+        itemGroup.appendChild(text);
+        legendGroup.appendChild(itemGroup);
+        
+        currentX += itemWidth;
+      });
+      
+      // Insert legend at the end of SVG (so it appears on top)
+      svgClone.appendChild(legendGroup);
+    }
+
+    function getSvgString() {
+      var svg = document.querySelector('#preview svg');
+      if (!svg) return null;
+      
+      // Clone the SVG to avoid modifying the original
+      var svgClone = svg.cloneNode(true);
+      
+      // Check if legend exists in SVG
+      var legendElements = svgClone.querySelectorAll('.apexcharts-legend, .apexcharts-legend-series, .apexcharts-legend-text');
+      var hasLegend = legendElements.length > 0;
+      
+      // If no legend found in SVG, but user wants legend and we have multiple series, create manual legend
+      var userWantsLegend = document.getElementById('showLegend').checked;
+      if (!hasLegend && userWantsLegend && chart && chart.w && chart.w.config && chart.w.config.series) {
+        var seriesData = chart.w.config.series;
+        if (seriesData.length > 1 || (seriesData.length === 1 && seriesData[0].name)) {
+          console.log('Creating manual legend for', seriesData.length, 'series');
+          createManualLegend(svgClone, seriesData);
+          hasLegend = true;
+        }
+      }
+      
+      // Ensure all text elements have explicit font-family attributes
+      var textElements = svgClone.querySelectorAll('text, tspan');
+      textElements.forEach(function(textElement) {
+        // Set explicit font-family attribute
+        textElement.setAttribute('font-family', "'Anek Latin', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif");
+        
+        // Also set font-weight if not already set
+        if (!textElement.getAttribute('font-weight')) {
+          var computedStyle = window.getComputedStyle(textElement);
+          textElement.setAttribute('font-weight', computedStyle.fontWeight || '400');
+        }
+        
+        // Set font-size if not already set
+        if (!textElement.getAttribute('font-size')) {
+          var computedStyle = window.getComputedStyle(textElement);
+          textElement.setAttribute('font-size', computedStyle.fontSize || '12px');
+        }
+      });
+      
+      console.log('Final SVG has legend:', hasLegend);
+      return svgClone.outerHTML;
+    }
+
+    document.getElementById('render').addEventListener('click', render);
+
+    document.getElementById('insert').addEventListener('click', async function () {
+      if (!chart) { await render(); }
+      var svg = getSvgString();
+      var title = document.getElementById('title').value || 'Apex Chart';
+      
+      var width = parseInt(document.getElementById('width').value, 10) || 600;
+      var height = parseInt(document.getElementById('height').value, 10) || 400;
+      
+      var meta = { 
+        title: title,
+        width: width,
+        height: height
+      };
+      
+      if (svg) {
+        parent.postMessage({ 
+          pluginMessage: { 
+            type: 'insert-svg', 
+            svg: svg, 
+            meta: meta
+          } 
+        }, '*');
+      }
+    });
+  </script>
+</body>
+</html>

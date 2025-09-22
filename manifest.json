@@ -1,0 +1,19 @@
+{
+  "name": "ApexCharts \u2192 SVG",
+  "id": "com.carexpert.apexcharts-to-svg",
+  "api": "1.0.0",
+  "editorType": [
+    "figma"
+  ],
+  "main": "dist/main.js",
+  "ui": "ui.html",
+  "permissions": [
+    "currentuser"
+  ],
+  "relaunchButtons": [
+    {
+      "command": "relaunch",
+      "name": "Update Chart"
+    }
+  ]
+}

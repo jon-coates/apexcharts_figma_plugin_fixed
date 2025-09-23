@@ -172,6 +172,194 @@
     .config-header {
       position: relative;
     }
+
+    /* Tab styles */
+    .tab-container {
+      margin-top: 8px;
+      width: 100%;
+    }
+
+    .tab-nav {
+      display: flex;
+      padding: 4px;
+      gap: 4px;
+      background-color: #edf2f7;
+      /* border-bottom: 1px solid #E5E7EB; */
+      margin-bottom: 12px;
+      border-radius: 8px;
+    }
+
+    .tab-button {
+      padding: 8px 16px;
+      font-size: 12px;
+      /* border-radius: 0px; */
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      color: #6B7280;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .tab-button:hover {
+      color: #374151;
+      background: #F9FAFB;
+    }
+
+    .tab-button.active {
+      color: #3B82F6;
+      /* border-bottom-color: #3B82F6; */
+      box-shadow: 0 2px 2px 0 rgba(148, 163, 184, 0.5);
+      font-weight: 600;
+      background-color: #ffffff;
+      /* box-shadow: 0 2px 0 0 #3B82F6; */
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .tab-content textarea {
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    /* Table styles */
+    .table-container {
+      max-height: 300px;
+      overflow-y: auto;
+      border: 1px solid #E5E7EB;
+      border-radius: 4px;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .data-table th,
+    .data-table td {
+      padding: 6px 8px;
+      text-align: left;
+      border-bottom: 1px solid #F3F4F6;
+    }
+
+    .data-table th {
+      background: #F9FAFB;
+      font-weight: 600;
+      color: #374151;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .data-table input {
+      width: 100%;
+      border: none;
+      background: transparent;
+      padding: 2px 4px;
+      font-size: 12px;
+      font-family: inherit;
+    }
+
+    .data-table input:focus {
+      outline: none;
+      background: white;
+      border: 1px solid #3B82F6;
+      border-radius: 2px;
+    }
+
+    .table-controls {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    .table-controls button {
+      padding: 6px 12px;
+      font-size: 11px;
+      border: 1px solid #D1D5DB;
+      border-radius: 4px;
+      background: white;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .table-controls button:hover {
+      background: #F9FAFB;
+    }
+
+    .add-series-btn {
+      background: #10B981 !important;
+      color: white !important;
+      border-color: #10B981 !important;
+    }
+
+    .add-series-btn:hover {
+      background: #059669 !important;
+    }
+
+    .remove-series-btn {
+      background: #EF4444 !important;
+      color: white !important;
+      border-color: #EF4444 !important;
+    }
+
+    .remove-series-btn:hover {
+      background: #DC2626 !important;
+    }
+
+    /* X button styles for column and row removal */
+    .remove-column-btn, .remove-row-btn {
+      position: absolute;
+      top: 2px;
+      right: 1px;
+      width: 24px;
+      height: 24px;
+      border: 0px solid #ffffff;
+      border-radius: 50%;
+      padding: 0;
+      background: transparent;
+      color: #6B7280;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      transition: all 0.2s ease;
+      /* box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); */
+    }
+
+    .remove-column-btn:hover, .remove-row-btn:hover {
+      background: #EF4444;
+      color: white;
+      border-color: #EF4444;
+      transform: scale(1.05);
+      box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
+    }
+
+    .remove-column-btn:active, .remove-row-btn:active {
+      transform: scale(0.95);
+    }
+
+    /* Position header cells relatively to contain X buttons */
+    .data-table th {
+      position: relative;
+    }
+
+    /* Position row cells relatively for row X buttons */
+    .data-table td {
+      position: relative;
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 </head>
@@ -220,9 +408,34 @@
           <input id="markerSize" type="number" placeholder="6" min="0" max="20" />
         </div>
 
-        <div class="row">
-          <label for="data">Data (JSON)</label>
-          <textarea id="data" rows="8" placeholder='{"categories":["Sep 2024","Oct 2024"],"series":[{"name":"Ford Ranger (Current 12 months)","data":[5200,4950]},{"name":"Ford Ranger (Previous 12 months)","data":[4700,4600]}]}'>{"categories":["Jan","Feb","Mar","Apr","May"],"series":[{"name":"Sales","data":[1200,1900,3000,5000,4000]},{"name":"Revenue","data":[1000,1500,2500,4200,3800]}]}</textarea>
+        <div class="tab-container">
+            <div class="tab-nav">
+              <button class="tab-button active" data-tab="json">JSON</button>
+              <button class="tab-button" data-tab="table">Table</button>
+            </div>
+            
+            <div class="tab-content active" id="json-tab">
+              <textarea id="data" rows="8" placeholder='{"categories":["Sep 2024","Oct 2024"],"series":[{"name":"Ford Ranger (Current 12 months)","data":[5200,4950]},{"name":"Ford Ranger (Previous 12 months)","data":[4700,4600]}]}'>{"categories":["Jan","Feb","Mar","Apr","May"],"series":[{"name":"Sales","data":[1200,1900,3000,5000,4000]},{"name":"Revenue","data":[1000,1500,2500,4200,3800]}]}</textarea>
+            </div>
+            
+            <div class="tab-content" id="table-tab">
+              <div class="table-controls">
+                <button class="add-series-btn" id="addColumn">+ Column</button>
+                <button class="add-series-btn" id="addRow">+ Row</button>
+              </div>
+              <div class="table-container">
+                <table class="data-table" id="dataTable">
+                  <thead>
+                    <tr id="headerRow">
+                      <th>Categories</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tableBody">
+                    <!-- Table rows will be generated dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
         </div>
       </div>
       
@@ -284,6 +497,210 @@
     }
     
     document.getElementById('togglePreview').addEventListener('click', togglePreview);
+
+    // ── Tab functionality ─────────────────────────────────────────────────
+    let currentData = {
+      categories: ["Jan", "Feb", "Mar", "Apr", "May"],
+      series: [
+        { name: "Sales", data: [1200, 1900, 3000, 5000, 4000] },
+        { name: "Revenue", data: [1000, 1500, 2500, 4200, 3800] }
+      ]
+    };
+
+    function switchTab(tabName) {
+      // Update tab buttons
+      document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+
+      // Update tab content
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      document.getElementById(`${tabName}-tab`).classList.add('active');
+
+      // Sync data when switching to table view
+      if (tabName === 'table') {
+        syncJsonToTable();
+      }
+    }
+
+    // Tab button event listeners
+    document.querySelectorAll('.tab-button').forEach(button => {
+      button.addEventListener('click', () => {
+        switchTab(button.dataset.tab);
+      });
+    });
+
+    // ── Table management ─────────────────────────────────────────────────
+    function syncJsonToTable() {
+      try {
+        const jsonData = JSON.parse(document.getElementById('data').value);
+        if (jsonData && jsonData.categories && jsonData.series) {
+          currentData = jsonData;
+          renderTable();
+        }
+      } catch (e) {
+        // If JSON is invalid, keep current data
+        renderTable();
+      }
+    }
+
+    function syncTableToJson() {
+      const categories = [];
+      const series = [];
+
+      // Get categories from first column
+      const categoryInputs = document.querySelectorAll('#tableBody tr td:first-child input');
+      categoryInputs.forEach(input => {
+        if (input.value.trim()) {
+          categories.push(input.value.trim());
+        }
+      });
+
+      // Get series data
+      const headerCells = document.querySelectorAll('#headerRow th:not(:first-child)');
+      headerCells.forEach((header, seriesIndex) => {
+        const seriesName = header.querySelector('input').value.trim();
+        if (seriesName) {
+          const seriesData = [];
+          const dataInputs = document.querySelectorAll(`#tableBody tr td:nth-child(${seriesIndex + 2}) input`);
+          dataInputs.forEach(input => {
+            const value = parseFloat(input.value) || 0;
+            seriesData.push(value);
+          });
+          series.push({ name: seriesName, data: seriesData });
+        }
+      });
+
+      currentData = { categories, series };
+      document.getElementById('data').value = JSON.stringify(currentData, null, 2);
+    }
+
+    function renderTable() {
+      const tableBody = document.getElementById('tableBody');
+      const headerRow = document.getElementById('headerRow');
+      
+      // Clear existing content
+      tableBody.innerHTML = '';
+      
+      // Update header row with X buttons
+      headerRow.innerHTML = '<th><input type="text" placeholder="Category" value="" /></th>';
+      currentData.series.forEach((series, index) => {
+        const th = document.createElement('th');
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.placeholder = 'Series name';
+        input.value = series.name || '';
+        input.addEventListener('input', syncTableToJson);
+        th.appendChild(input);
+        
+        // Add X button for removing column (but not for categories column)
+        if (index >= 0) {
+          const removeBtn = document.createElement('button');
+          removeBtn.className = 'remove-column-btn';
+          removeBtn.innerHTML = '×';
+          removeBtn.title = 'Remove column';
+          removeBtn.addEventListener('click', () => removeColumn(index));
+          th.appendChild(removeBtn);
+        }
+        
+        headerRow.appendChild(th);
+      });
+
+      // Create data rows
+      const maxLength = Math.max(
+        currentData.categories.length,
+        ...currentData.series.map(s => s.data.length)
+      );
+
+      for (let i = 0; i < maxLength; i++) {
+        const row = document.createElement('tr');
+        
+        // Category cell
+        const categoryCell = document.createElement('td');
+        const categoryInput = document.createElement('input');
+        categoryInput.type = 'text';
+        categoryInput.placeholder = 'Category';
+        categoryInput.value = currentData.categories[i] || '';
+        categoryInput.addEventListener('input', syncTableToJson);
+        categoryCell.appendChild(categoryInput);
+        row.appendChild(categoryCell);
+
+        // Series data cells
+        currentData.series.forEach((series, seriesIndex) => {
+          const dataCell = document.createElement('td');
+          const dataInput = document.createElement('input');
+          dataInput.type = 'number';
+          dataInput.placeholder = '0';
+          dataInput.value = series.data[i] || '';
+          dataInput.addEventListener('input', syncTableToJson);
+          dataCell.appendChild(dataInput);
+          row.appendChild(dataCell);
+        });
+
+        // Add X button for removing row
+        const removeRowCell = document.createElement('td');
+        const removeRowBtn = document.createElement('button');
+        removeRowBtn.className = 'remove-row-btn';
+        removeRowBtn.innerHTML = '×';
+        removeRowBtn.title = 'Remove row';
+        removeRowBtn.addEventListener('click', () => removeRow(i));
+        removeRowCell.appendChild(removeRowBtn);
+        row.appendChild(removeRowCell);
+
+        tableBody.appendChild(row);
+      }
+    }
+
+    function addColumn() {
+      currentData.series.push({ name: `Series ${currentData.series.length + 1}`, data: new Array(currentData.categories.length).fill(0) });
+      renderTable();
+      syncTableToJson();
+    }
+
+    function removeColumn(columnIndex) {
+      if (currentData.series.length > 1) {
+        currentData.series.splice(columnIndex, 1);
+        renderTable();
+        syncTableToJson();
+      }
+    }
+
+    function addRow() {
+      currentData.categories.push(`Category ${currentData.categories.length + 1}`);
+      currentData.series.forEach(series => {
+        series.data.push(0);
+      });
+      renderTable();
+      syncTableToJson();
+    }
+
+    function removeRow(rowIndex) {
+      if (currentData.categories.length > 1) {
+        currentData.categories.splice(rowIndex, 1);
+        currentData.series.forEach(series => {
+          series.data.splice(rowIndex, 1);
+        });
+        renderTable();
+        syncTableToJson();
+      }
+    }
+
+    // Table control event listeners
+    document.getElementById('addColumn').addEventListener('click', addColumn);
+    document.getElementById('addRow').addEventListener('click', addRow);
+
+    // Sync JSON to table when JSON textarea changes
+    document.getElementById('data').addEventListener('input', () => {
+      if (document.getElementById('table-tab').classList.contains('active')) {
+        syncJsonToTable();
+      }
+    });
+
+    // Initialize table on page load
+    renderTable();
 
     // ── Brand tokens (edit once, used everywhere) ────────────────────────────
     var BRAND = {

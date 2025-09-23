@@ -1,5 +1,5 @@
 // src/main.ts
-figma.showUI(__html__, { width: 420, height: 540 });
+figma.showUI(__html__, { width: 1200, height: 800 });
 async function insertSvg(svg, name, chartWidth, chartHeight) {
   try {
     await figma.loadFontAsync({ family: "Anek Latin", style: "Regular" });

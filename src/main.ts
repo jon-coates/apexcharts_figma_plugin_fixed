@@ -1,5 +1,5 @@
 // Main thread (no DOM access)
-figma.showUI(__html__, { width: 420, height: 540 });
+figma.showUI(__html__, { width: 1200, height: 800 });
 
 async function insertSvg(svg: string, name: string, chartWidth?: number, chartHeight?: number) {
   // Load the Anek Latin font family in Figma

@@ -72,6 +72,9 @@ figma.ui.onmessage = async (msg) => {
     await insertSvg(msg.svg, title, chartWidth, chartHeight);
     figma.notify("Chart inserted as editable vectors");
   }
+  if (msg.type === "resize-window" && typeof msg.width === "number" && typeof msg.height === "number") {
+    figma.ui.resize(msg.width, msg.height);
+  }
   if (msg.type === "close") {
     figma.closePlugin();
   }

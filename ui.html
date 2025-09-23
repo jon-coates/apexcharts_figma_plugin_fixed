@@ -10,8 +10,8 @@
       font-family: 'Anek Latin', Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans"; 
       margin: 0; 
       height: 100vh;
-      min-height: 600px;
-      min-width: 800px;
+      min-height: 800px;
+      min-width: 1200px;
       display: flex;
       flex-direction: column;
     }
@@ -21,6 +21,7 @@
       display: flex;
       flex: 1;
       height: 100vh;
+      overflow: hidden;
     }
     
     .config-section {
@@ -30,6 +31,11 @@
       display: flex;
       flex-direction: column;
       height: 100vh;
+      transition: width 0.3s ease;
+    }
+    
+    .config-section.collapsed {
+      width: 300px;
     }
     
     .config-content {
@@ -53,6 +59,13 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      transition: all 0.3s ease;
+      overflow: auto;
+      height: 100vh;
+    }
+    
+    .preview-section.hidden {
+      display: none;
     }
     
     .section-title {
@@ -97,9 +110,7 @@
       border-radius: 8px; 
       padding: 16px; 
       background: white;
-      max-width: 100%;
-      max-height: 100%;
-      overflow: auto;
+      margin: auto;
     }
     
     .button-group {
@@ -132,14 +143,48 @@
     button#insert:hover {
       background: #2563EB;
     }
+    
+    .toggle-button {
+      position: absolute;
+      top: -4px;
+      right: 0px;
+      width: 32px;
+      height: 32px;
+      border: 1px solid #D1D5DB;
+      border-radius: 4px;
+      background: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: #6B7280;
+      transition: all 0.2s ease;
+      z-index: 10;
+    }
+    
+    .toggle-button:hover {
+      background: #F9FAFB;
+      border-color: #9CA3AF;
+      color: #374151;
+    }
+    
+    .config-header {
+      position: relative;
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 </head>
 <body>
   <div class="main-content">
-    <div class="config-section">
+    <div class="config-section" id="configSection">
       <div class="config-content">
-        <div class="section-title">Chart Settings</div>
+        <div class="config-header">
+          <div class="section-title">Chart Settings</div>
+          <button class="toggle-button" id="togglePreview" title="Toggle preview">
+            ←
+          </button>
+        </div>
         
         <div class="row">
           <label for="title">Chart title</label>
@@ -189,12 +234,57 @@
       </div>
     </div>
     
-    <div class="preview-section">
+    <div class="preview-section" id="previewSection">
       <div id="preview"></div>
     </div>
   </div>
 
   <script>
+    // ── Toggle functionality ─────────────────────────────────────────────────
+    let previewVisible = true;
+    
+    function togglePreview() {
+      const configSection = document.getElementById('configSection');
+      const previewSection = document.getElementById('previewSection');
+      const toggleButton = document.getElementById('togglePreview');
+      
+      previewVisible = !previewVisible;
+      
+      if (previewVisible) {
+        // Show preview
+        configSection.classList.remove('collapsed');
+        previewSection.classList.remove('hidden');
+        toggleButton.textContent = '←';
+        toggleButton.title = 'Hide preview';
+        
+        // Resize window to accommodate preview
+        parent.postMessage({ 
+          pluginMessage: { 
+            type: 'resize-window', 
+            width: 1200, 
+            height: 800 
+          } 
+        }, '*');
+      } else {
+        // Hide preview
+        configSection.classList.add('collapsed');
+        previewSection.classList.add('hidden');
+        toggleButton.textContent = '→';
+        toggleButton.title = 'Show preview';
+        
+        // Resize window to config section width only
+        parent.postMessage({ 
+          pluginMessage: { 
+            type: 'resize-window', 
+            width: 300, 
+            height: 800 
+          } 
+        }, '*');
+      }
+    }
+    
+    document.getElementById('togglePreview').addEventListener('click', togglePreview);
+
     // ── Brand tokens (edit once, used everywhere) ────────────────────────────
     var BRAND = {
       fontFamily: "'Anek Latin', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",

@@ -533,6 +533,16 @@
         </div>
 
         <div class="row">
+          <label for="widthPreset">Width</label>
+          <select id="widthPreset">
+            <option value="article-desktop">Article Desktop (740px)</option>
+            <option value="article-mobile">Article Mobile (350px)</option>
+            <option value="full-width">Full width (1180px)</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+        
+        <div class="row" id="customWidthRow" style="display: none;">
           <label for="width">Width (px)</label>
           <input id="width" type="number" placeholder="600" />
         </div>
@@ -1095,10 +1105,40 @@
       try { return JSON.parse(raw); } catch(e) { return null; }
     }
 
+    // ── Width preset handling ───────────────────────────────────────────────
+    function getWidthValue() {
+      var preset = document.getElementById('widthPreset').value;
+      var customWidth = parseInt(document.getElementById('width').value, 10);
+      
+      switch (preset) {
+        case 'article-desktop':
+          return 740;
+        case 'article-mobile':
+          return 350;
+        case 'full-width':
+          return 1180;
+        case 'custom':
+          return customWidth || 600;
+        default:
+          return 600;
+      }
+    }
+    
+    function handleWidthPresetChange() {
+      var preset = document.getElementById('widthPreset').value;
+      var customRow = document.getElementById('customWidthRow');
+      
+      if (preset === 'custom') {
+        customRow.style.display = 'flex';
+      } else {
+        customRow.style.display = 'none';
+      }
+    }
+
     // ── Branded defaults (keeps width/height support) ───────────────────────
     function baseOptions() {
       var type = document.getElementById('type').value;
-      var width = parseInt(document.getElementById('width').value, 10) || 600;
+      var width = getWidthValue();
       var height = parseInt(document.getElementById('height').value, 10) || 400;
 
       return {
@@ -1431,6 +1471,9 @@
       return svgClone.outerHTML;
     }
 
+    // Width preset event listener
+    document.getElementById('widthPreset').addEventListener('change', handleWidthPresetChange);
+
     document.getElementById('render').addEventListener('click', render);
 
     document.getElementById('insert').addEventListener('click', async function () {
@@ -1438,7 +1481,7 @@
       var svg = getSvgString();
       var title = document.getElementById('title').value || 'Apex Chart';
       
-      var width = parseInt(document.getElementById('width').value, 10) || 600;
+      var width = getWidthValue();
       var height = parseInt(document.getElementById('height').value, 10) || 400;
       
       var meta = { 

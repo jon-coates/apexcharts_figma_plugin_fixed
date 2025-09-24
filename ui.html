@@ -640,6 +640,13 @@
     </div>
   </div>
 
+  <datalist id="presetColours">
+    <option value="#EB0800">Red</option>
+    <option value="#0A6EFA">Blue</option>
+    <option value="#FFC71A">Yellow</option>
+    <option value="#10B981">Green</option>
+  </datalist>
+
   <script>
     // ── Toggle functionality ─────────────────────────────────────────────────
     let previewVisible = true;
@@ -864,6 +871,7 @@
         const colourInput = document.createElement('input');
         colourInput.type = 'color';
         colourInput.className = 'series-colour-input';
+        colourInput.setAttribute('list', 'presetColours');
         colourInput.value = series.color && series.color.trim() !== '' ? series.color : '#000000';
         colourInput.addEventListener('change', function() {
           const seriesIdx = parseInt(colourPicker.dataset.seriesIndex);
@@ -952,6 +960,7 @@
         const categoryColourInput = document.createElement('input');
         categoryColourInput.type = 'color';
         categoryColourInput.className = 'category-colour-input';
+        categoryColourInput.setAttribute('list', 'presetColours');
         categoryColourInput.value = categoryColour || '#000000';
         categoryColourInput.addEventListener('change', function() {
           const categoryIdx = parseInt(categoryColourPicker.dataset.categoryIndex);

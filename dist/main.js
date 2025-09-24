@@ -1,5 +1,5 @@
 // src/main.ts
-figma.showUI(__html__, { width: 1200, height: 800 });
+figma.showUI(__html__, { width: 1440, height: 800 });
 async function insertSvg(svg, name, chartWidth, chartHeight) {
   try {
     await figma.loadFontAsync({ family: "Anek Latin", style: "Regular" });
@@ -33,7 +33,7 @@ async function insertSvg(svg, name, chartWidth, chartHeight) {
   let frameWidth;
   let frameHeight;
   const padding = 16;
-  frameWidth = (chartWidth || 600) + padding * 2;
+  frameWidth = (chartWidth || 780) + padding * 2;
   frameHeight = (chartHeight || 400) + padding * 2;
   frameWidth = Math.max(frameWidth, 200);
   frameHeight = Math.max(frameHeight, 200);

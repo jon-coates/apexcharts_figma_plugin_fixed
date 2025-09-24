@@ -441,6 +441,69 @@
       border: 1px solid #3B82F6;
       border-radius: 2px;
     }
+
+    /* Colour preset button styles */
+    .colour-preset-buttons {
+      display: flex;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .colour-preset-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      font-size: 11px;
+      border: 1px solid #D1D5DB;
+      border-radius: 4px;
+      background: white;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      flex: 1;
+    }
+
+    .colour-preset-btn:hover {
+      background: #F9FAFB;
+      border-color: #9CA3AF;
+    }
+
+    .colour-preset-btn:active {
+      background: #F3F4F6;
+      transform: translateY(1px);
+    }
+
+    .colour-preset-btn.active {
+      background: white;
+      color: #3B82F6;
+      border-color: #3B82F6;
+      border-width: 2px;
+      box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+    }
+
+    .colour-preset-btn.active:hover {
+      background: rgba(37, 99, 235, 0.2);
+      border-color: #2563EB;
+    }
+
+    .colour-swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      flex-shrink: 0;
+    }
+
+    .colour-swatch-group {
+      display: flex;
+      gap: 2px;
+    }
+
+    .colour-swatch-group .colour-swatch {
+      width: 10px;
+      height: 10px;
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 </head>
@@ -487,6 +550,23 @@
         <div class="row">
           <label for="markerSize">Marker size</label>
           <input id="markerSize" type="number" placeholder="6" min="0" max="20" />
+        </div>
+
+        <div class="row">
+          <label>Series colours</label>
+          <div class="colour-preset-buttons">
+            <button class="colour-preset-btn" data-preset="neutral" title="Apply neutral single colour to all series">
+              <div class="colour-swatch" style="background-color: #AFAFB3;"></div>
+              Neutral
+            </button>
+            <button class="colour-preset-btn" data-preset="primary-comparison" title="Apply primary and comparison colours to all series">
+              <div class="colour-swatch-group">
+                <div class="colour-swatch" style="background-color: #EB0800;"></div>
+                <div class="colour-swatch" style="background-color: #AFAFB3;"></div>
+              </div>
+              Primary & Comparison
+            </button>
+          </div>
         </div>
 
         <div class="tab-container">
@@ -670,16 +750,14 @@
             seriesData.push(value);
           });
           
-          // Get colour from the colour input in the header cell
-          const colourPicker = header.querySelector('.series-colour-picker');
-          const colourInput = colourPicker ? colourPicker.querySelector('.series-colour-input') : null;
-          
+          // Get colour from the series data (individual series colour overrides global palette)
           let seriesColor = "";
           
-          // Only include colour if it's actually set (colour picker has 'has-colour' class)
-          if (colourInput && colourPicker && colourPicker.classList.contains('has-colour')) {
-            seriesColor = colourInput.value;
+          // Check if this series has an individual colour set
+          if (currentData.series[seriesIndex] && currentData.series[seriesIndex].color && currentData.series[seriesIndex].color.trim() !== '') {
+            seriesColor = currentData.series[seriesIndex].color;
           }
+          // If no individual colour, don't set color property (will use global palette)
           
           series.push({ name: seriesName, data: seriesData, color: seriesColor });
         }
@@ -721,7 +799,9 @@
         const colourPicker = document.createElement('div');
         colourPicker.className = 'series-colour-picker';
         colourPicker.dataset.seriesIndex = index;
+        colourPicker.title = 'Click to set override colour, double-click to clear override';
         
+        // Only show colour if it's an override (individual series colour set)
         if (series.color && series.color.trim() !== '') {
           colourPicker.classList.add('has-colour');
           colourPicker.style.setProperty('--series-colour', series.color);
@@ -744,6 +824,12 @@
         colourPicker.addEventListener('click', function(e) {
           e.stopPropagation();
           colourInput.click();
+        });
+        
+        // Double-click to clear override and return to global palette
+        colourPicker.addEventListener('dblclick', function(e) {
+          e.stopPropagation();
+          updateSeriesColour(index, '');
         });
         
         colourPicker.appendChild(colourInput);
@@ -828,7 +914,13 @@
 
     function updateSeriesColour(seriesIndex, colour) {
       if (currentData.series[seriesIndex]) {
-        currentData.series[seriesIndex].color = colour;
+        // Set the individual series colour (this overrides the global palette)
+        // If colour is empty or default, clear the override
+        if (colour && colour.trim() !== '' && colour !== '#000000') {
+          currentData.series[seriesIndex].color = colour;
+        } else {
+          currentData.series[seriesIndex].color = '';
+        }
         
         // Update the colour picker display without re-rendering the entire table
         const colourPicker = document.querySelector(`[data-series-index="${seriesIndex}"]`);
@@ -836,9 +928,10 @@
           // Get the existing colour input before updating content
           const existingColourInput = colourPicker.querySelector('.series-colour-input');
           
-          if (colour) {
+          // Only show as having colour if it's a real override
+          if (currentData.series[seriesIndex].color && currentData.series[seriesIndex].color.trim() !== '') {
             colourPicker.classList.add('has-colour');
-            colourPicker.style.setProperty('--series-colour', colour);
+            colourPicker.style.setProperty('--series-colour', currentData.series[seriesIndex].color);
             colourPicker.textContent = '✓';
           } else {
             colourPicker.classList.remove('has-colour');
@@ -847,13 +940,24 @@
           
           // Re-append the colour input if it existed
           if (existingColourInput) {
-            existingColourInput.value = colour || '#000000';
+            existingColourInput.value = currentData.series[seriesIndex].color || '#000000';
             colourPicker.appendChild(existingColourInput);
           }
         }
         
         // Always sync to JSON to ensure persistence when switching tabs
         syncTableToJson();
+        
+        // Update preset active state in case individual changes affect it
+        const currentPreset = detectCurrentPreset();
+        if (currentPreset) {
+          updatePresetActiveState(currentPreset);
+        } else {
+          // Clear all active states if no preset matches
+          document.querySelectorAll('.colour-preset-btn').forEach(btn => {
+            btn.classList.remove('active');
+          });
+        }
       }
     }
 
@@ -885,9 +989,75 @@
       }
     }
 
+    function applyColourPreset(preset) {
+      let colours = [];
+      
+      switch (preset) {
+        case 'neutral':
+          // Set neutral colour palette
+          colours = ['#AFAFB3'];
+          break;
+        case 'primary-comparison':
+          // Set primary and comparison colour palette
+          colours = ['#EB0800', '#AFAFB3'];
+          break;
+        default:
+          return;
+      }
+
+      // Update the global BRAND palette
+      BRAND.palette = colours;
+
+      // Clear individual series colours to use the global palette
+      currentData.series.forEach(series => {
+        series.color = '';
+      });
+
+      // Update active state
+      updatePresetActiveState(preset);
+
+      // Re-render table to show updated colours
+      renderTable();
+      syncTableToJson();
+    }
+
+    function updatePresetActiveState(activePreset) {
+      // Remove active class from all preset buttons
+      document.querySelectorAll('.colour-preset-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      
+      // Add active class to the selected preset
+      const activeButton = document.querySelector(`[data-preset="${activePreset}"]`);
+      if (activeButton) {
+        activeButton.classList.add('active');
+      }
+    }
+
+    function detectCurrentPreset() {
+      // Check if current palette matches any preset
+      const currentPalette = BRAND.palette;
+      
+      if (JSON.stringify(currentPalette) === JSON.stringify(['#AFAFB3'])) {
+        return 'neutral';
+      } else if (JSON.stringify(currentPalette) === JSON.stringify(['#EB0800', '#AFAFB3'])) {
+        return 'primary-comparison';
+      }
+      
+      return null; // No preset matches
+    }
+
     // Table control event listeners
     document.getElementById('addColumn').addEventListener('click', addColumn);
     document.getElementById('addRow').addEventListener('click', addRow);
+
+    // Colour preset event listeners
+    document.querySelectorAll('.colour-preset-btn').forEach(button => {
+      button.addEventListener('click', function() {
+        const preset = this.dataset.preset;
+        applyColourPreset(preset);
+      });
+    });
 
     // Sync JSON to table when JSON textarea changes
     document.getElementById('data').addEventListener('input', () => {
@@ -912,6 +1082,12 @@
       sizes: { label: "12px", legend: "12px", title: "16px", subtitle: "12px", dataLabel: "12px" },
       weights: { label: 400, legend: 500, title: 600, subtitle: 500, dataLabel: 600 }
     };
+    
+    // Set initial active state based on current palette (after BRAND is defined)
+    const currentPreset = detectCurrentPreset();
+    if (currentPreset) {
+      updatePresetActiveState(currentPreset);
+    }
 
     var chart = null;
 

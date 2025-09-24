@@ -548,6 +548,16 @@
           <input id="horizontal" type="checkbox" />
         </div>
 
+        <div class="row" id="stackedToggleRow" style="display: none;">
+          <label for="stacked">Stacked</label>
+          <input id="stacked" type="checkbox" />
+        </div>
+
+        <div class="row" id="markerSizeRow" style="display: none;">
+          <label for="markerSize">Marker size</label>
+          <input id="markerSize" type="number" placeholder="6" min="0" max="20" />
+        </div>
+
         <div class="row">
           <label for="widthPreset">Width</label>
           <select id="widthPreset">
@@ -574,8 +584,8 @@
         </div>
 
         <div class="row">
-          <label for="markerSize">Marker size</label>
-          <input id="markerSize" type="number" placeholder="6" min="0" max="20" />
+          <label for="showDataLabels">Show data labels</label>
+          <input id="showDataLabels" type="checkbox" />
         </div>
 
         <div class="row">
@@ -1170,6 +1180,8 @@
       var width = getWidthValue();
       var height = parseInt(document.getElementById('height').value, 10) || 400;
       var isHorizontal = type === "bar" && document.getElementById('horizontal').checked;
+      var isStacked = type === "bar" && document.getElementById('stacked').checked;
+      var showDataLabels = document.getElementById('showDataLabels').checked;
 
       return {
         chart: {
@@ -1179,8 +1191,13 @@
           fontFamily: BRAND.fontFamily,
           foreColor: BRAND.foreColor,
           animations: { enabled: false },
-          toolbar: { show: false }
+          toolbar: { show: false },
+          stacked: isStacked
         },
+        
+        // Store horizontal state and categories for tooltip access
+        isHorizontal: isHorizontal,
+        chartCategories: [], // Will be set in render function
         colors: BRAND.palette,
 
         title: {
@@ -1261,7 +1278,7 @@
         },
 
         dataLabels: {
-          enabled: false,
+          enabled: showDataLabels,
           style: {
             fontSize: BRAND.sizes.dataLabel,
             fontFamily: BRAND.fontFamily,
@@ -1292,13 +1309,45 @@
         tooltip: {
           theme: "light",
           style: { fontSize: BRAND.sizes.label, fontFamily: BRAND.fontFamily },
-          x: { formatter: function(val){ return (isHorizontal) ? Number(val).toLocaleString() : val; } },
-          y: { formatter: function(v){ return (isHorizontal) ? v : Number(v).toLocaleString(); } },
           enabled: true,
           shared: true,
           intersect: false,
           followCursor: false,
-          custom: undefined,
+          custom: function({series, seriesIndex, dataPointIndex, w}) {
+            // Use the stored horizontal state and categories from chart config
+            var isHorizontalChart = w.config.isHorizontal || false;
+            var categories = w.config.chartCategories || [];
+            
+            // Debug logging
+            console.log('Tooltip debug:', {
+              isHorizontalChart: isHorizontalChart,
+              dataPointIndex: dataPointIndex,
+              chartCategories: categories,
+              categoryValue: categories && categories[dataPointIndex] ? categories[dataPointIndex] : 'undefined'
+            });
+            
+            var categoryValue = categories && categories[dataPointIndex] ? categories[dataPointIndex] : (dataPointIndex + 1);
+            var value = series[seriesIndex][dataPointIndex];
+            
+            var tooltipContent = '<div style="padding: 8px;">';
+            tooltipContent += '<div style="font-weight: 600; margin-bottom: 4px;">' + categoryValue + '</div>';
+            
+            series.forEach(function(seriesData, index) {
+              if (seriesData[dataPointIndex] !== null && seriesData[dataPointIndex] !== undefined) {
+                var seriesName = w.config.series[index].name || 'Series ' + (index + 1);
+                var seriesValue = Number(seriesData[dataPointIndex]).toLocaleString();
+                var seriesColor = w.config.series[index].color || w.config.colors[index % w.config.colors.length];
+                
+                tooltipContent += '<div style="display: flex; align-items: center; margin: 2px 0;">';
+                tooltipContent += '<div style="width: 8px; height: 8px; background-color: ' + seriesColor + '; border-radius: 50%; margin-right: 6px;"></div>';
+                tooltipContent += '<span style="font-size: 12px;">' + seriesName + ': ' + seriesValue + '</span>';
+                tooltipContent += '</div>';
+              }
+            });
+            
+            tooltipContent += '</div>';
+            return tooltipContent;
+          },
           crosshairs: {
             show: false
           }
@@ -1317,6 +1366,9 @@
       }
       
       console.log('ApexCharts is available, starting render...');
+      
+      // Get chart type for category assignment
+      var type = document.getElementById('type').value;
       
       // If we're on JSON tab and JSON was manually edited, parse from JSON textarea
       // Otherwise use currentData
@@ -1370,12 +1422,24 @@
       
       // For horizontal bar charts, categories go on y-axis, data values on x-axis
       var isHorizontal = type === "bar" && document.getElementById('horizontal').checked;
+      
+      console.log('Category assignment debug:', {
+        type: type,
+        isHorizontal: isHorizontal,
+        categories: json.categories,
+        categoriesLength: json.categories ? json.categories.length : 0
+      });
+      
       if (isHorizontal) {
         options.yaxis.categories = json.categories || [];
         options.xaxis.categories = [];
+        options.chartCategories = json.categories || [];
+        console.log('Assigned categories to yaxis:', options.yaxis.categories);
       } else {
         options.xaxis.categories = json.categories || [];
         options.yaxis.categories = [];
+        options.chartCategories = json.categories || [];
+        console.log('Assigned categories to xaxis:', options.xaxis.categories);
       }
       
       // Show legend based on user preference and data
@@ -1388,6 +1452,9 @@
       el.innerHTML = '';
       
       console.log('Creating ApexCharts with options:', options);
+      console.log('Final options xaxis categories:', options.xaxis.categories);
+      console.log('Final options yaxis categories:', options.yaxis.categories);
+      
       try {
         chart = new ApexCharts(el, options);
         console.log('ApexCharts instance created successfully');
@@ -1550,11 +1617,21 @@
     function handleChartTypeChange() {
       var chartType = document.getElementById('type').value;
       var horizontalRow = document.getElementById('horizontalToggleRow');
+      var stackedRow = document.getElementById('stackedToggleRow');
+      var markerSizeRow = document.getElementById('markerSizeRow');
       
       if (chartType === 'bar') {
         horizontalRow.style.display = 'flex';
+        stackedRow.style.display = 'flex';
+        markerSizeRow.style.display = 'none';
+      } else if (chartType === 'line') {
+        horizontalRow.style.display = 'none';
+        stackedRow.style.display = 'none';
+        markerSizeRow.style.display = 'flex';
       } else {
         horizontalRow.style.display = 'none';
+        stackedRow.style.display = 'none';
+        markerSizeRow.style.display = 'none';
       }
     }
 

@@ -538,10 +538,14 @@
           <label for="type">Type</label>
           <select id="type">
             <option value="line">Line</option>
-            <option value="column">Column</option>
             <option value="bar">Bar</option>
             <option value="area">Area</option>
           </select>
+        </div>
+
+        <div class="row" id="horizontalToggleRow" style="display: none;">
+          <label for="horizontal">Horizontal</label>
+          <input id="horizontal" type="checkbox" />
         </div>
 
         <div class="row">
@@ -1103,6 +1107,9 @@
     // Initialize table on page load
     renderTable();
 
+    // Initialize chart type handler to set initial state
+    handleChartTypeChange();
+
     // ── Brand tokens (edit once, used everywhere) ────────────────────────────
     var BRAND = {
       fontFamily: "'Anek Latin', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
@@ -1162,10 +1169,11 @@
       var type = document.getElementById('type').value;
       var width = getWidthValue();
       var height = parseInt(document.getElementById('height').value, 10) || 400;
+      var isHorizontal = type === "bar" && document.getElementById('horizontal').checked;
 
       return {
         chart: {
-          type: (type === "column" || type === "bar") ? "bar" : type,
+          type: type === "bar" ? "bar" : type,
           width: width,
           height: height,
           fontFamily: BRAND.fontFamily,
@@ -1202,7 +1210,7 @@
             show: false
           },
           labels: {
-            formatter: function(v){ return (type === "bar") ? Number(v).toLocaleString() : v; },
+            formatter: function(v){ return (isHorizontal) ? Number(v).toLocaleString() : v; },
             style: {
               colors: BRAND.axisColor,
               fontSize: BRAND.sizes.label,
@@ -1216,7 +1224,7 @@
             show: false
           },
           labels: {
-            formatter: function(v){ return (type === "bar") ? v : Number(v).toLocaleString(); },
+            formatter: function(v){ return (isHorizontal) ? v : Number(v).toLocaleString(); },
             style: {
               colors: BRAND.axisColor,
               fontSize: BRAND.sizes.label,
@@ -1236,14 +1244,14 @@
             }
           }
         },
-        stroke: { width: ((type === "column" || type === "bar") ? 0 : 2), lineCap: "round", curve: "smooth" },
+        stroke: { width: (type === "bar" ? 0 : 2), lineCap: "round", curve: "smooth" },
         markers: { size: ((type === "line" || type === "area") ? (parseInt(document.getElementById('markerSize').value, 10) || 5) : 0), strokeWidth: 2, strokeColors: "#fff" },
 
         plotOptions: {
           bar: { 
             columnWidth: "55%", 
-            borderRadius: 6,
-            horizontal: (type === "bar")
+            borderRadius: 0,
+            horizontal: isHorizontal
           },
           area: { fillTo: "origin" }
         },
@@ -1284,8 +1292,8 @@
         tooltip: {
           theme: "light",
           style: { fontSize: BRAND.sizes.label, fontFamily: BRAND.fontFamily },
-          x: { formatter: function(val){ return (type === "bar") ? Number(val).toLocaleString() : val; } },
-          y: { formatter: function(v){ return (type === "bar") ? v : Number(v).toLocaleString(); } },
+          x: { formatter: function(val){ return (isHorizontal) ? Number(val).toLocaleString() : val; } },
+          y: { formatter: function(v){ return (isHorizontal) ? v : Number(v).toLocaleString(); } },
           enabled: true,
           shared: true,
           intersect: false,
@@ -1361,7 +1369,8 @@
       options.series = processedSeries;
       
       // For horizontal bar charts, categories go on y-axis, data values on x-axis
-      if (type === "bar") {
+      var isHorizontal = type === "bar" && document.getElementById('horizontal').checked;
+      if (isHorizontal) {
         options.yaxis.categories = json.categories || [];
         options.xaxis.categories = [];
       } else {
@@ -1537,8 +1546,23 @@
       return svgClone.outerHTML;
     }
 
+    // Chart type change handler
+    function handleChartTypeChange() {
+      var chartType = document.getElementById('type').value;
+      var horizontalRow = document.getElementById('horizontalToggleRow');
+      
+      if (chartType === 'bar') {
+        horizontalRow.style.display = 'flex';
+      } else {
+        horizontalRow.style.display = 'none';
+      }
+    }
+
     // Width preset event listener
     document.getElementById('widthPreset').addEventListener('change', handleWidthPresetChange);
+
+    // Chart type event listener
+    document.getElementById('type').addEventListener('change', handleChartTypeChange);
 
     document.getElementById('render').addEventListener('click', render);
 

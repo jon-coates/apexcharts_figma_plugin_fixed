@@ -417,6 +417,53 @@
       cursor: pointer;
     }
 
+    /* Category colour picker styles */
+    .category-colour-picker {
+      width: 20px;
+      height: 20px;
+      border: 2px solid #D1D5DB;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: #F3F4F6;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+      color: #6B7280;
+      font-weight: 500;
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .category-colour-picker:hover {
+      border-color: #3B82F6;
+      transform: scale(1.05) translateY(-50%);
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+    }
+
+    .category-colour-picker.has-colour {
+      background: var(--category-colour);
+      color: white;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+
+    .category-colour-picker.has-colour:hover {
+      border-color: #1D4ED8;
+    }
+
+    .category-colour-input {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+
     .series-header-cell {
       white-space: nowrap;
       min-height: 32px;
@@ -442,68 +489,6 @@
       border-radius: 2px;
     }
 
-    /* Colour preset button styles */
-    .colour-preset-buttons {
-      display: flex;
-      gap: 8px;
-      flex: 1;
-    }
-
-    .colour-preset-btn {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 12px;
-      font-size: 11px;
-      border: 1px solid #D1D5DB;
-      border-radius: 4px;
-      background: white;
-      cursor: pointer;
-      font-weight: 500;
-      transition: all 0.2s ease;
-      flex: 1;
-    }
-
-    .colour-preset-btn:hover {
-      background: #F9FAFB;
-      border-color: #9CA3AF;
-    }
-
-    .colour-preset-btn:active {
-      background: #F3F4F6;
-      transform: translateY(1px);
-    }
-
-    .colour-preset-btn.active {
-      background: white;
-      color: #3B82F6;
-      border-color: #3B82F6;
-      border-width: 2px;
-      box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
-    }
-
-    .colour-preset-btn.active:hover {
-      background: rgba(37, 99, 235, 0.2);
-      border-color: #2563EB;
-    }
-
-    .colour-swatch {
-      width: 12px;
-      height: 12px;
-      border-radius: 2px;
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      flex-shrink: 0;
-    }
-
-    .colour-swatch-group {
-      display: flex;
-      gap: 2px;
-    }
-
-    .colour-swatch-group .colour-swatch {
-      width: 10px;
-      height: 10px;
-    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
   <script>
@@ -589,20 +574,26 @@
         </div>
 
         <div class="row">
-          <label>Series colours</label>
-          <div class="colour-preset-buttons">
-            <button class="colour-preset-btn" data-preset="neutral" title="Apply neutral single colour to all series">
-              <div class="colour-swatch" style="background-color: #AFAFB3;"></div>
-              Neutral
-            </button>
-            <button class="colour-preset-btn" data-preset="primary-comparison" title="Apply primary and comparison colours to all series">
-              <div class="colour-swatch-group">
-                <div class="colour-swatch" style="background-color: #EB0800;"></div>
-                <div class="colour-swatch" style="background-color: #AFAFB3;"></div>
-              </div>
-              Primary & Comparison
-            </button>
-          </div>
+          <label>Chart theme</label>
+          <select id="chartTheme">
+            <option value="neutral">Neutral (all grey)</option>
+            <option value="brand">Brand (all red)</option>
+            <option value="secondary">Secondary (all blue)</option>
+            <option value="categorical">Categorical (multi-colour)</option>
+            <option value="sequential-brand">Sequential Brand (red gradient)</option>
+            <option value="sequential-secondary">Sequential Secondary (blue gradient)</option>
+            <option value="diverging-1">Diverging 1 (red to green)</option>
+            <option value="diverging-2">Diverging 2 (green to red)</option>
+            <option value="diverging-3">Diverging 3 (red to blue)</option>
+          </select>
+        </div>
+
+        <div class="row">
+          <label>Highlight mode</label>
+          <select id="colourMode">
+            <option value="series">Series</option>
+            <option value="category">Category</option>
+          </select>
         </div>
 
         <div class="tab-container">
@@ -701,7 +692,8 @@
       series: [
         { name: "Sales", data: [1200, 1900, 3000, 5000, 4000], color: "" },
         { name: "Revenue", data: [1000, 1500, 2500, 4200, 3800], color: "" }
-      ]
+      ],
+      categoryColours: ["", "", "", "", ""]
     };
     
     let jsonManuallyEdited = false;
@@ -750,6 +742,11 @@
           // Update currentData with JSON data
           currentData = jsonData;
           
+          // Ensure categoryColours array exists
+          if (!currentData.categoryColours) {
+            currentData.categoryColours = new Array(currentData.categories.length).fill('');
+          }
+          
           // Re-render table with new data
           renderTable();
         }
@@ -763,12 +760,23 @@
     function syncTableToJson() {
       const categories = [];
       const series = [];
+      const categoryColours = [];
 
       // Get categories from first column
       const categoryInputs = document.querySelectorAll('#tableBody tr td:first-child input');
-      categoryInputs.forEach(input => {
-        if (input.value.trim()) {
-          categories.push(input.value.trim());
+      categoryInputs.forEach((input, index) => {
+        const categoryValue = input.value.trim();
+        // Filter out colour values and other invalid category names
+        if (categoryValue && 
+            categoryValue !== '#000000' && 
+            !categoryValue.startsWith('#') && 
+            categoryValue !== '') {
+          categories.push(categoryValue);
+          
+          // Get category colour from colour picker
+          const categoryColourPicker = input.parentElement.querySelector('.category-colour-picker');
+          const categoryColour = categoryColourPicker ? categoryColourPicker.dataset.colour || '' : '';
+          categoryColours.push(categoryColour);
         }
       });
 
@@ -800,7 +808,12 @@
       });
 
       // Update currentData with the latest table data
-      currentData = { categories, series };
+      currentData = { categories, series, categoryColours };
+      
+      // Debug logging
+      console.log('syncTableToJson - categories:', categories);
+      console.log('syncTableToJson - categoryColours:', categoryColours);
+      console.log('syncTableToJson - series:', series);
       
       // Update JSON textarea
       document.getElementById('data').value = JSON.stringify(currentData, null, 2);
@@ -906,12 +919,63 @@
         
         // Category cell
         const categoryCell = document.createElement('td');
+        categoryCell.style.position = 'relative';
+        
         const categoryInput = document.createElement('input');
         categoryInput.type = 'text';
         categoryInput.placeholder = 'Category';
         categoryInput.value = currentData.categories[i] || '';
+        categoryInput.style.width = 'calc(100% - 30px)';
         categoryInput.addEventListener('input', syncTableToJson);
         categoryCell.appendChild(categoryInput);
+        
+        // Category colour picker
+        const categoryColourPicker = document.createElement('div');
+        categoryColourPicker.className = 'category-colour-picker';
+        categoryColourPicker.dataset.categoryIndex = i;
+        categoryColourPicker.title = 'Click to set category colour, double-click to clear';
+        
+        // Set initial colour
+        const categoryColour = currentData.categoryColours && currentData.categoryColours[i] ? currentData.categoryColours[i] : '';
+        if (categoryColour && categoryColour.trim() !== '') {
+          categoryColourPicker.classList.add('has-colour');
+          categoryColourPicker.style.setProperty('--category-colour', categoryColour);
+          categoryColourPicker.textContent = '✓';
+          categoryColourPicker.dataset.colour = categoryColour;
+        } else {
+          categoryColourPicker.classList.remove('has-colour');
+          categoryColourPicker.textContent = '●';
+          categoryColourPicker.dataset.colour = '';
+        }
+        
+        // Hidden colour input
+        const categoryColourInput = document.createElement('input');
+        categoryColourInput.type = 'color';
+        categoryColourInput.className = 'category-colour-input';
+        categoryColourInput.value = categoryColour || '#000000';
+        categoryColourInput.addEventListener('change', function() {
+          const categoryIdx = parseInt(categoryColourPicker.dataset.categoryIndex);
+          updateCategoryColour(categoryIdx, this.value);
+        });
+        
+        // Prevent colour input from affecting category input
+        categoryColourInput.addEventListener('input', function(e) {
+          e.stopPropagation();
+        });
+        
+        categoryColourPicker.addEventListener('click', function(e) {
+          e.stopPropagation();
+          categoryColourInput.click();
+        });
+        
+        // Double-click to clear override
+        categoryColourPicker.addEventListener('dblclick', function(e) {
+          e.stopPropagation();
+          updateCategoryColour(i, '');
+        });
+        
+        categoryColourPicker.appendChild(categoryColourInput);
+        categoryCell.appendChild(categoryColourPicker);
         row.appendChild(categoryCell);
 
         // Series data cells
@@ -988,16 +1052,63 @@
         // Always sync to JSON to ensure persistence when switching tabs
         syncTableToJson();
         
-        // Update preset active state based on current state
-        const currentPreset = detectCurrentPreset();
-        if (currentPreset) {
-          updatePresetActiveState(currentPreset);
-        } else {
-          // Clear all active states if no preset matches or individual colours are set
-          document.querySelectorAll('.colour-preset-btn').forEach(btn => {
-            btn.classList.remove('active');
-          });
+        // Update theme selection based on current state
+        const currentTheme = detectCurrentTheme();
+        if (currentTheme) {
+          document.getElementById('chartTheme').value = currentTheme;
         }
+      }
+    }
+
+    function updateCategoryColour(categoryIndex, colour) {
+      console.log('updateCategoryColour called:', categoryIndex, colour);
+      
+      // Ensure categoryColours array exists
+      if (!currentData.categoryColours) {
+        currentData.categoryColours = new Array(currentData.categories.length).fill('');
+      }
+      
+      // Set the individual category colour
+      if (colour && colour.trim() !== '' && colour !== '#000000') {
+        currentData.categoryColours[categoryIndex] = colour;
+        console.log('Set category', categoryIndex, 'colour to:', colour);
+      } else {
+        currentData.categoryColours[categoryIndex] = '';
+        console.log('Cleared category', categoryIndex, 'colour override');
+      }
+      
+      // Update the colour picker display without re-rendering the entire table
+      const colourPicker = document.querySelector(`[data-category-index="${categoryIndex}"]`);
+      if (colourPicker) {
+        // Get the existing colour input before updating content
+        const existingColourInput = colourPicker.querySelector('.category-colour-input');
+        
+        // Only show as having colour if it's a real override
+        if (currentData.categoryColours[categoryIndex] && currentData.categoryColours[categoryIndex].trim() !== '') {
+          colourPicker.classList.add('has-colour');
+          colourPicker.style.setProperty('--category-colour', currentData.categoryColours[categoryIndex]);
+          colourPicker.textContent = '✓';
+          colourPicker.dataset.colour = currentData.categoryColours[categoryIndex];
+        } else {
+          colourPicker.classList.remove('has-colour');
+          colourPicker.textContent = '●';
+          colourPicker.dataset.colour = '';
+        }
+        
+        // Re-append the colour input if it existed
+        if (existingColourInput) {
+          existingColourInput.value = currentData.categoryColours[categoryIndex] || '#000000';
+          colourPicker.appendChild(existingColourInput);
+        }
+      }
+      
+      // Always sync to JSON to ensure persistence when switching tabs
+      syncTableToJson();
+      
+      // Update theme selection based on current state
+      const currentTheme = detectCurrentTheme();
+      if (currentTheme) {
+        document.getElementById('chartTheme').value = currentTheme;
       }
     }
 
@@ -1014,6 +1125,13 @@
       currentData.series.forEach(series => {
         series.data.push(0);
       });
+      
+      // Ensure categoryColours array exists and add empty colour for new category
+      if (!currentData.categoryColours) {
+        currentData.categoryColours = new Array(currentData.categories.length - 1).fill('');
+      }
+      currentData.categoryColours.push('');
+      
       renderTable();
       syncTableToJson();
     }
@@ -1024,85 +1142,90 @@
         currentData.series.forEach(series => {
           series.data.splice(rowIndex, 1);
         });
+        
+        // Remove category colour as well
+        if (currentData.categoryColours) {
+          currentData.categoryColours.splice(rowIndex, 1);
+        }
+        
         renderTable();
         syncTableToJson();
       }
     }
 
-    function applyColourPreset(preset) {
-      let colours = [];
-      
-      switch (preset) {
-        case 'neutral':
-          // Set neutral colour palette
-          colours = ['#AFAFB3'];
-          break;
-        case 'primary-comparison':
-          // Set primary and comparison colour palette
-          colours = ['#EB0800', '#AFAFB3'];
-          break;
-        default:
-          return;
-      }
-
+    function applyTheme(themeName) {
       // Update the global BRAND palette
-      BRAND.palette = colours;
-
-      // Clear individual series colours to use the global palette
-      currentData.series.forEach(series => {
-        series.color = '';
-      });
-
-      // Update active state
-      updatePresetActiveState(preset);
-
-      // Re-render table to show updated colours
-      renderTable();
-      syncTableToJson();
-    }
-
-    function updatePresetActiveState(activePreset) {
-      // Remove active class from all preset buttons
-      document.querySelectorAll('.colour-preset-btn').forEach(btn => {
-        btn.classList.remove('active');
-      });
-      
-      // Add active class to the selected preset
-      const activeButton = document.querySelector(`[data-preset="${activePreset}"]`);
-      if (activeButton) {
-        activeButton.classList.add('active');
+      if (THEMES[themeName]) {
+        BRAND.palette = THEMES[themeName];
+        
+        // Clear all individual series and category colour overrides
+        currentData.series.forEach(series => {
+          series.color = '';
+        });
+        
+        if (currentData.categoryColours) {
+          currentData.categoryColours.fill('');
+        }
+        
+        console.log('Applied theme:', themeName, 'with palette:', BRAND.palette);
+        
+        // Re-render table to show updated colours
+        renderTable();
+        syncTableToJson();
       }
     }
 
-    function detectCurrentPreset() {
-      // Check if current palette matches any preset
+    function detectCurrentTheme() {
+      // Check if current palette matches any theme
       const currentPalette = BRAND.palette;
       
-      // Only detect preset as active if no individual series colours are set
-      const hasIndividualColours = currentData.series.some(series => series.color && series.color.trim() !== '');
-      if (hasIndividualColours) {
-        return null; // Individual colours override presets
+      // Only detect theme if no individual colours are set
+      const hasIndividualSeriesColours = currentData.series.some(series => series.color && series.color.trim() !== '');
+      const hasIndividualCategoryColours = currentData.categoryColours && currentData.categoryColours.some(colour => colour && colour.trim() !== '');
+      
+      if (hasIndividualSeriesColours || hasIndividualCategoryColours) {
+        return null; // Individual colours override theme detection
       }
       
-      if (JSON.stringify(currentPalette) === JSON.stringify(['#AFAFB3'])) {
-        return 'neutral';
-      } else if (JSON.stringify(currentPalette) === JSON.stringify(['#EB0800', '#AFAFB3'])) {
-        return 'primary-comparison';
+      // Check each theme
+      for (const [themeName, themePalette] of Object.entries(THEMES)) {
+        if (JSON.stringify(currentPalette) === JSON.stringify(themePalette)) {
+          return themeName;
+        }
       }
       
-      return null; // No preset matches
+      return null; // No theme matches
     }
 
     // Table control event listeners
     document.getElementById('addColumn').addEventListener('click', addColumn);
     document.getElementById('addRow').addEventListener('click', addRow);
 
-    // Colour preset event listeners
-    document.querySelectorAll('.colour-preset-btn').forEach(button => {
-      button.addEventListener('click', function() {
-        const preset = this.dataset.preset;
-        applyColourPreset(preset);
-      });
+    // Colour mode change handler
+    function handleColourModeChange() {
+      const colourMode = document.getElementById('colourMode').value;
+      
+      // Ensure categoryColours array exists for category mode
+      if (colourMode === 'category') {
+        if (!currentData.categoryColours) {
+          currentData.categoryColours = new Array(currentData.categories.length).fill('');
+        }
+      }
+      
+      // Update theme selection based on current state
+      const currentTheme = detectCurrentTheme();
+      if (currentTheme) {
+        document.getElementById('chartTheme').value = currentTheme;
+      }
+    }
+
+    // Colour mode event listener
+    document.getElementById('colourMode').addEventListener('change', handleColourModeChange);
+
+    // Theme change event listener
+    document.getElementById('chartTheme').addEventListener('change', function() {
+      const selectedTheme = this.value;
+      applyTheme(selectedTheme);
     });
 
     // Sync JSON to table when JSON textarea changes
@@ -1114,11 +1237,6 @@
       }
     });
 
-    // Initialize table on page load
-    renderTable();
-
-    // Initialize chart type handler to set initial state
-    handleChartTypeChange();
 
     // ── Brand tokens (edit once, used everywhere) ────────────────────────────
     var BRAND = {
@@ -1127,16 +1245,38 @@
       axisColor: "#334155",     // axis/labels
       subtitleColor: "#475569",
       gridColor: "#E2E8F0",
-      palette: ["#E11D48","#7D7D83","#22C55E","#F59E0B","#8B5CF6","#10B981","#F43F5E"],
+      palette: ["#AFAFB3"], // Default to neutral theme
       sizes: { label: "12px", legend: "12px", title: "16px", subtitle: "12px", dataLabel: "12px" },
       weights: { label: 400, legend: 500, title: 600, subtitle: 500, dataLabel: 600 }
     };
+
+    // ── Chart theme definitions ───────────────────────────────────────────────
+    var THEMES = {
+      neutral: ["#AFAFB3"],
+      brand: ["#EB0800"],
+      secondary: ["#0A6EFA"],
+      categorical: ["#E11D48", "#7D7D83", "#22C55E", "#F59E0B", "#8B5CF6", "#10B981", "#F43F5E"],
+      "sequential-brand": ["#FF6B6B", "#FF5252", "#EB0800", "#D32F2F", "#C62828"],
+      "sequential-secondary": ["#64B5F6", "#42A5F5", "#0A6EFA", "#1976D2", "#1565C0"],
+      "diverging-1": ["#EB0800", "#FF9800", "#FFEB3B", "#8BC34A", "#4CAF50"],
+      "diverging-2": ["#4CAF50", "#8BC34A", "#FFEB3B", "#FF9800", "#EB0800"],
+      "diverging-3": ["#EB0800", "#E91E63", "#9C27B0", "#673AB7", "#0A6EFA"]
+    };
     
-    // Set initial active state based on current palette (after BRAND is defined)
-    const currentPreset = detectCurrentPreset();
-    if (currentPreset) {
-      updatePresetActiveState(currentPreset);
+    // Set initial theme based on current palette (after BRAND is defined)
+    const currentTheme = detectCurrentTheme();
+    if (currentTheme) {
+      document.getElementById('chartTheme').value = currentTheme;
     }
+
+    // Initialize table on page load
+    renderTable();
+
+    // Initialize chart type handler to set initial state
+    handleChartTypeChange();
+    
+    // Initialize colour mode handler to set initial state
+    handleColourModeChange();
 
     var chart = null;
 
@@ -1241,7 +1381,18 @@
             show: false
           },
           labels: {
-            formatter: function(v){ return (isHorizontal) ? v : Number(v).toLocaleString(); },
+            formatter: function(v, opts) { 
+              if (isHorizontal) {
+                // For horizontal charts, v should be the category name
+                // If it's a number, try to get the category from the chart categories
+                if (typeof v === 'number' && opts && opts.w && opts.w.config && opts.w.config.chartCategories) {
+                  return opts.w.config.chartCategories[v - 1] || v;
+                }
+                return v;
+              } else {
+                return Number(v).toLocaleString();
+              }
+            },
             style: {
               colors: BRAND.axisColor,
               fontSize: BRAND.sizes.label,
@@ -1318,16 +1469,26 @@
             var isHorizontalChart = w.config.isHorizontal || false;
             var categories = w.config.chartCategories || [];
             
+            // For horizontal charts, the data is in x,y format
+            var categoryValue, value;
+            if (isHorizontalChart && series[seriesIndex] && series[seriesIndex][dataPointIndex] && typeof series[seriesIndex][dataPointIndex] === 'object') {
+              // Data is in {x: category, y: value} format
+              categoryValue = series[seriesIndex][dataPointIndex].x;
+              value = series[seriesIndex][dataPointIndex].y;
+            } else {
+              // Traditional format or fallback
+              categoryValue = categories && categories[dataPointIndex] ? categories[dataPointIndex] : (dataPointIndex + 1);
+              value = series[seriesIndex][dataPointIndex];
+            }
+            
             // Debug logging
             console.log('Tooltip debug:', {
               isHorizontalChart: isHorizontalChart,
               dataPointIndex: dataPointIndex,
               chartCategories: categories,
-              categoryValue: categories && categories[dataPointIndex] ? categories[dataPointIndex] : 'undefined'
+              categoryValue: categoryValue,
+              value: value
             });
-            
-            var categoryValue = categories && categories[dataPointIndex] ? categories[dataPointIndex] : (dataPointIndex + 1);
-            var value = series[seriesIndex][dataPointIndex];
             
             var tooltipContent = '<div style="padding: 8px;">';
             tooltipContent += '<div style="font-weight: 600; margin-bottom: 4px;">' + categoryValue + '</div>';
@@ -1335,8 +1496,24 @@
             series.forEach(function(seriesData, index) {
               if (seriesData[dataPointIndex] !== null && seriesData[dataPointIndex] !== undefined) {
                 var seriesName = w.config.series[index].name || 'Series ' + (index + 1);
-                var seriesValue = Number(seriesData[dataPointIndex]).toLocaleString();
-                var seriesColor = w.config.series[index].color || w.config.colors[index % w.config.colors.length];
+                var seriesValue;
+                var seriesColor = w.config.colors[index % w.config.colors.length];
+                
+                // Handle different data formats
+                if (isHorizontalChart && typeof seriesData[dataPointIndex] === 'object') {
+                  // Data is in {x: category, y: value} format
+                  seriesValue = Number(seriesData[dataPointIndex].y).toLocaleString();
+                } else {
+                  // Traditional format
+                  seriesValue = Number(seriesData[dataPointIndex]).toLocaleString();
+                }
+                
+                // For category mode, try to get the actual colour from the data point
+                if (w.config.series[index].data && w.config.series[index].data[dataPointIndex] && w.config.series[index].data[dataPointIndex].fillColor) {
+                  seriesColor = w.config.series[index].data[dataPointIndex].fillColor;
+                } else if (w.config.series[index].color) {
+                  seriesColor = w.config.series[index].color;
+                }
                 
                 tooltipContent += '<div style="display: flex; align-items: center; margin: 2px 0;">';
                 tooltipContent += '<div style="width: 8px; height: 8px; background-color: ' + seriesColor + '; border-radius: 50%; margin-right: 6px;"></div>';
@@ -1393,32 +1570,72 @@
 
       var options = baseOptions();
       
-      // Check if any series has individual colours set
-      var hasIndividualColours = json.series.some(series => series.color && series.color.trim() !== '');
+      // Get colour mode
+      var colourMode = document.getElementById('colourMode').value;
       
-      // Process series to handle per-series colours
+      // Process series based on colour mode
       var processedSeries = json.series.map(function(series, index) {
         var processedSeries = {
           name: series.name,
           data: series.data
         };
         
-        // If series has a custom colour, add it to the series object
-        if (series.color && series.color.trim() !== '') {
-          processedSeries.color = series.color;
-          console.log('Setting individual colour for series', index, ':', series.color);
+        if (colourMode === 'category') {
+          // Category mode: don't set individual series colours
+          // We'll handle category colours at the chart level
         } else {
-          // For series without individual colours, explicitly set the palette colour
-          // to prevent ApexCharts from using its default palette
-          var paletteIndex = index % options.colors.length;
-          processedSeries.color = options.colors[paletteIndex];
-          console.log('Setting palette colour for series', index, ':', options.colors[paletteIndex], 'from palette index', paletteIndex);
+          // Series mode: traditional series-based colouring
+          // Check if any series has individual colours set
+          var hasIndividualColours = json.series.some(series => series.color && series.color.trim() !== '');
+          
+          // If series has a custom colour, add it to the series object
+          if (series.color && series.color.trim() !== '') {
+            processedSeries.color = series.color;
+            console.log('Setting individual colour for series', index, ':', series.color);
+          } else {
+            // For series without individual colours, explicitly set the palette colour
+            // to prevent ApexCharts from using its default palette
+            var paletteIndex = index % options.colors.length;
+            processedSeries.color = options.colors[paletteIndex];
+            console.log('Setting palette colour for series', index, ':', options.colors[paletteIndex], 'from palette index', paletteIndex);
+          }
         }
         
         return processedSeries;
       });
       
       options.series = processedSeries;
+      
+      // Handle category colours if in category mode
+      if (colourMode === 'category' && json.categoryColours && json.categoryColours.length > 0) {
+        // For category mode, we'll modify each series to have data points with individual colours
+        options.series = options.series.map(function(series, seriesIndex) {
+          var newSeries = {
+            name: series.name,
+            data: series.data.map(function(value, dataIndex) {
+              var categoryColour = json.categoryColours[dataIndex];
+              if (categoryColour && categoryColour.trim() !== '') {
+                return {
+                  x: json.categories[dataIndex],
+                  y: value,
+                  fillColor: categoryColour
+                };
+              } else {
+                // Use palette colour if no category colour is set
+                var paletteIndex = dataIndex % options.colors.length;
+                return {
+                  x: json.categories[dataIndex],
+                  y: value,
+                  fillColor: options.colors[paletteIndex]
+                };
+              }
+            })
+          };
+          return newSeries;
+        });
+        
+        console.log('Category mode - modified series with individual colours');
+      }
       
       // For horizontal bar charts, categories go on y-axis, data values on x-axis
       var isHorizontal = type === "bar" && document.getElementById('horizontal').checked;
@@ -1427,14 +1644,46 @@
         type: type,
         isHorizontal: isHorizontal,
         categories: json.categories,
-        categoriesLength: json.categories ? json.categories.length : 0
+        categoriesLength: json.categories ? json.categories.length : 0,
+        categoryColours: json.categoryColours,
+        series: json.series
       });
       
       if (isHorizontal) {
+        // For horizontal bar charts, we need to transform the data format
+        // and configure the yaxis properly
         options.yaxis.categories = json.categories || [];
         options.xaxis.categories = [];
         options.chartCategories = json.categories || [];
+        
+        // Transform series data to use x,y format for horizontal charts
+        // But only if not already transformed by category mode
+        options.series = options.series.map(function(series) {
+          var transformedData = series.data.map(function(value, index) {
+            // If data is already in object format (from category mode), use it as-is
+            if (typeof value === 'object' && value !== null) {
+              return value;
+            }
+            // Otherwise, transform from simple array format
+            return {
+              x: json.categories[index] || (index + 1),
+              y: value
+            };
+          });
+          return {
+            name: series.name,
+            data: transformedData,
+            color: series.color
+          };
+        });
+        
         console.log('Assigned categories to yaxis:', options.yaxis.categories);
+        console.log('Transformed series data for horizontal chart:', options.series);
+        console.log('Category mode and horizontal chart - data format check:', {
+          colourMode: colourMode,
+          isHorizontal: isHorizontal,
+          firstSeriesData: options.series[0] ? options.series[0].data.slice(0, 3) : 'no series'
+        });
       } else {
         options.xaxis.categories = json.categories || [];
         options.yaxis.categories = [];

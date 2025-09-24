@@ -506,6 +506,17 @@
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+  <script>
+    // Debug script to check if ApexCharts loads
+    window.addEventListener('load', function() {
+      console.log('Page loaded, checking ApexCharts...');
+      if (typeof ApexCharts === 'undefined') {
+        console.error('ApexCharts failed to load from CDN');
+      } else {
+        console.log('ApexCharts loaded successfully, version:', ApexCharts.version || 'unknown');
+      }
+    });
+  </script>
 </head>
 <body>
   <div class="main-content">
@@ -527,6 +538,7 @@
           <label for="type">Type</label>
           <select id="type">
             <option value="line">Line</option>
+            <option value="column">Column</option>
             <option value="bar">Bar</option>
             <option value="area">Area</option>
           </select>
@@ -828,6 +840,7 @@
         colourInput.value = series.color && series.color.trim() !== '' ? series.color : '#000000';
         colourInput.addEventListener('change', function() {
           const seriesIdx = parseInt(colourPicker.dataset.seriesIndex);
+          console.log('Colour input changed for series:', seriesIdx, 'new value:', this.value);
           updateSeriesColour(seriesIdx, this.value);
         });
         
@@ -923,13 +936,16 @@
     }
 
     function updateSeriesColour(seriesIndex, colour) {
+      console.log('updateSeriesColour called:', seriesIndex, colour);
       if (currentData.series[seriesIndex]) {
         // Set the individual series colour (this overrides the global palette)
         // If colour is empty or default, clear the override
         if (colour && colour.trim() !== '' && colour !== '#000000') {
           currentData.series[seriesIndex].color = colour;
+          console.log('Set series', seriesIndex, 'colour to:', colour);
         } else {
           currentData.series[seriesIndex].color = '';
+          console.log('Cleared series', seriesIndex, 'colour override');
         }
         
         // Update the colour picker display without re-rendering the entire table
@@ -958,12 +974,12 @@
         // Always sync to JSON to ensure persistence when switching tabs
         syncTableToJson();
         
-        // Update preset active state in case individual changes affect it
+        // Update preset active state based on current state
         const currentPreset = detectCurrentPreset();
         if (currentPreset) {
           updatePresetActiveState(currentPreset);
         } else {
-          // Clear all active states if no preset matches
+          // Clear all active states if no preset matches or individual colours are set
           document.querySelectorAll('.colour-preset-btn').forEach(btn => {
             btn.classList.remove('active');
           });
@@ -1047,6 +1063,12 @@
     function detectCurrentPreset() {
       // Check if current palette matches any preset
       const currentPalette = BRAND.palette;
+      
+      // Only detect preset as active if no individual series colours are set
+      const hasIndividualColours = currentData.series.some(series => series.color && series.color.trim() !== '');
+      if (hasIndividualColours) {
+        return null; // Individual colours override presets
+      }
       
       if (JSON.stringify(currentPalette) === JSON.stringify(['#AFAFB3'])) {
         return 'neutral';
@@ -1143,7 +1165,7 @@
 
       return {
         chart: {
-          type: type,
+          type: (type === "column" || type === "bar") ? "bar" : type,
           width: width,
           height: height,
           fontFamily: BRAND.fontFamily,
@@ -1180,6 +1202,7 @@
             show: false
           },
           labels: {
+            formatter: function(v){ return (type === "bar") ? Number(v).toLocaleString() : v; },
             style: {
               colors: BRAND.axisColor,
               fontSize: BRAND.sizes.label,
@@ -1193,7 +1216,7 @@
             show: false
           },
           labels: {
-            formatter: function(v){ return Number(v).toLocaleString(); },
+            formatter: function(v){ return (type === "bar") ? v : Number(v).toLocaleString(); },
             style: {
               colors: BRAND.axisColor,
               fontSize: BRAND.sizes.label,
@@ -1213,11 +1236,15 @@
             }
           }
         },
-        stroke: { width: (type === "bar" ? 0 : 2), lineCap: "round", curve: "smooth" },
+        stroke: { width: ((type === "column" || type === "bar") ? 0 : 2), lineCap: "round", curve: "smooth" },
         markers: { size: ((type === "line" || type === "area") ? (parseInt(document.getElementById('markerSize').value, 10) || 5) : 0), strokeWidth: 2, strokeColors: "#fff" },
 
         plotOptions: {
-          bar: { columnWidth: "55%", borderRadius: 6 },
+          bar: { 
+            columnWidth: "55%", 
+            borderRadius: 6,
+            horizontal: (type === "bar")
+          },
           area: { fillTo: "origin" }
         },
         fill: {
@@ -1257,8 +1284,8 @@
         tooltip: {
           theme: "light",
           style: { fontSize: BRAND.sizes.label, fontFamily: BRAND.fontFamily },
-          x: { formatter: function(val){ return val; } },
-          y: { formatter: function(v){ return Number(v).toLocaleString(); } },
+          x: { formatter: function(val){ return (type === "bar") ? Number(val).toLocaleString() : val; } },
+          y: { formatter: function(v){ return (type === "bar") ? v : Number(v).toLocaleString(); } },
           enabled: true,
           shared: true,
           intersect: false,
@@ -1274,6 +1301,15 @@
     }
 
     async function render() {
+      // Check if ApexCharts is available
+      if (typeof ApexCharts === 'undefined') {
+        console.error('ApexCharts is not loaded!');
+        parent.postMessage({ pluginMessage: { type: 'notify', message: 'ApexCharts library failed to load' } }, '*');
+        return;
+      }
+      
+      console.log('ApexCharts is available, starting render...');
+      
       // If we're on JSON tab and JSON was manually edited, parse from JSON textarea
       // Otherwise use currentData
       var json;
@@ -1281,6 +1317,7 @@
         try {
           json = JSON.parse(document.getElementById('data').value);
         } catch (e) {
+          console.error('JSON parse error:', e);
           parent.postMessage({ pluginMessage: { type: 'notify', message: 'Invalid JSON format' } }, '*');
           return;
         }
@@ -1289,11 +1326,15 @@
       }
       
       if (!json || !Array.isArray(json.series)) {
+        console.error('Invalid data structure:', json);
         parent.postMessage({ pluginMessage: { type: 'notify', message: 'Invalid data: expected { categories, series }' } }, '*');
         return;
       }
 
       var options = baseOptions();
+      
+      // Check if any series has individual colours set
+      var hasIndividualColours = json.series.some(series => series.color && series.color.trim() !== '');
       
       // Process series to handle per-series colours
       var processedSeries = json.series.map(function(series, index) {
@@ -1305,13 +1346,28 @@
         // If series has a custom colour, add it to the series object
         if (series.color && series.color.trim() !== '') {
           processedSeries.color = series.color;
+          console.log('Setting individual colour for series', index, ':', series.color);
+        } else {
+          // For series without individual colours, explicitly set the palette colour
+          // to prevent ApexCharts from using its default palette
+          var paletteIndex = index % options.colors.length;
+          processedSeries.color = options.colors[paletteIndex];
+          console.log('Setting palette colour for series', index, ':', options.colors[paletteIndex], 'from palette index', paletteIndex);
         }
         
         return processedSeries;
       });
       
       options.series = processedSeries;
-      options.xaxis.categories = json.categories || [];
+      
+      // For horizontal bar charts, categories go on y-axis, data values on x-axis
+      if (type === "bar") {
+        options.yaxis.categories = json.categories || [];
+        options.xaxis.categories = [];
+      } else {
+        options.xaxis.categories = json.categories || [];
+        options.yaxis.categories = [];
+      }
       
       // Show legend based on user preference and data
       var legendCheckbox = document.getElementById('showLegend').checked;
@@ -1321,8 +1377,18 @@
 
       var el = document.getElementById('preview');
       el.innerHTML = '';
-      chart = new ApexCharts(el, options);
-      await chart.render();
+      
+      console.log('Creating ApexCharts with options:', options);
+      try {
+        chart = new ApexCharts(el, options);
+        console.log('ApexCharts instance created successfully');
+        await chart.render();
+        console.log('Chart rendered successfully');
+      } catch (error) {
+        console.error('Error creating or rendering chart:', error);
+        parent.postMessage({ pluginMessage: { type: 'notify', message: 'Chart rendering failed: ' + error.message } }, '*');
+        return;
+      }
       
       // Debug: Check if legend was rendered
       setTimeout(function() {
@@ -1400,7 +1466,7 @@
         // Use series-specific colour if available, otherwise fall back to palette
         var seriesColour = series.color;
         if (!seriesColour || seriesColour.trim() === '') {
-          var currentPalette = parseCustomColours() || BRAND.palette;
+          var currentPalette = BRAND.palette;
           seriesColour = currentPalette[index % currentPalette.length];
         }
         marker.setAttribute('fill', seriesColour);

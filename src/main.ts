@@ -1,5 +1,5 @@
 // Main thread (no DOM access)
-figma.showUI(__html__, { width: 1200, height: 800 });
+figma.showUI(__html__, { width: 1440, height: 800 });
 
 async function insertSvg(svg: string, name: string, chartWidth?: number, chartHeight?: number) {
   // Load the Anek Latin font family in Figma
@@ -52,7 +52,7 @@ async function insertSvg(svg: string, name: string, chartWidth?: number, chartHe
   const padding = 16;
   
   // Use chart dimensions with padding (fallback to defaults if not provided)
-  frameWidth = (chartWidth || 600) + padding * 2;
+  frameWidth = (chartWidth || 780) + padding * 2;
   frameHeight = (chartHeight || 400) + padding * 2;
   
   // Ensure minimum frame size

@@ -25,7 +25,7 @@
     }
     
     .config-section {
-      width: 300px;
+      width: 420px;
       background: #F8F9FA;
       border-right: 1px solid #E5E7EB;
       display: flex;
@@ -35,7 +35,7 @@
     }
     
     .config-section.collapsed {
-      width: 300px;
+      width: 420px;
     }
     
     .config-content {
@@ -232,7 +232,7 @@
     /* Table styles */
     .table-container {
       max-height: 300px;
-      overflow-y: auto;
+      overflow: auto;
       border: 1px solid #E5E7EB;
       border-radius: 4px;
     }
@@ -241,6 +241,8 @@
       width: 100%;
       border-collapse: collapse;
       font-size: 12px;
+      table-layout: fixed;
+      min-width: 500px; /* Ensure minimum width for horizontal scrolling */
     }
 
     .data-table th,
@@ -248,6 +250,19 @@
       padding: 6px 8px;
       text-align: left;
       border-bottom: 1px solid #F3F4F6;
+      vertical-align: middle;
+    }
+
+    .data-table th:first-child,
+    .data-table td:first-child {
+      width: 100px;
+      min-width: 100px;
+    }
+
+    .data-table th:not(:first-child),
+    .data-table td:not(:first-child) {
+      width: 150px;
+      min-width: 150px;
     }
 
     .data-table th {
@@ -318,47 +333,113 @@
 
     /* X button styles for column and row removal */
     .remove-column-btn, .remove-row-btn {
-      position: absolute;
-      top: 2px;
-      right: 1px;
-      width: 24px;
-      height: 24px;
+      width: 16px;
+      height: 16px;
+      min-width: 16px;
+      max-width: 16px;
       border: 0px solid #ffffff;
       border-radius: 50%;
       padding: 0;
       background: transparent;
       color: #6B7280;
-      font-size: 11px;
+      font-size: 9px;
       font-weight: 600;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 10;
       transition: all 0.2s ease;
-      /* box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); */
+    }
+    
+    .remove-column-btn {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
     }
 
     .remove-column-btn:hover, .remove-row-btn:hover {
       background: #EF4444;
       color: white;
       border-color: #EF4444;
-      transform: scale(1.05);
+      transform: scale(1.05) translateY(-50%);
       box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
     }
 
     .remove-column-btn:active, .remove-row-btn:active {
-      transform: scale(0.95);
+      transform: scale(0.95) translateY(-50%);
     }
 
-    /* Position header cells relatively to contain X buttons */
-    .data-table th {
+    /* Series colour picker styles */
+    .series-colour-picker {
+      width: 20px;
+      height: 20px;
+      border: 2px solid #D1D5DB;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: #F3F4F6;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+      color: #6B7280;
+      font-weight: 500;
+      position: absolute;
+      right: 30px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .series-colour-picker:hover {
+      border-color: #3B82F6;
+      transform: scale(1.05) translateY(-50%);
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+    }
+
+    .series-colour-picker.has-colour {
+      background: var(--series-colour);
+      color: white;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+
+    .series-colour-picker.has-colour:hover {
+      border-color: #1D4ED8;
+    }
+
+    .series-colour-input {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .series-header-cell {
+      white-space: nowrap;
+      min-height: 32px;
+      padding: 6px 8px;
+      overflow: hidden;
       position: relative;
     }
 
-    /* Position row cells relatively for row X buttons */
-    .data-table td {
-      position: relative;
+    .series-name-input {
+      width: calc(100% - 50px); /* Account for colour picker and remove button */
+      border: none;
+      background: transparent;
+      padding: 2px 4px;
+      font-size: 12px;
+      font-family: inherit;
+      display: inline-block;
+    }
+
+    .series-name-input:focus {
+      outline: none;
+      background: white;
+      border: 1px solid #3B82F6;
+      border-radius: 2px;
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
@@ -410,15 +491,15 @@
 
         <div class="tab-container">
             <div class="tab-nav">
-              <button class="tab-button active" data-tab="json">JSON</button>
-              <button class="tab-button" data-tab="table">Table</button>
+              <button class="tab-button active" data-tab="table">Table</button>
+              <button class="tab-button" data-tab="json">JSON</button>
             </div>
             
-            <div class="tab-content active" id="json-tab">
-              <textarea id="data" rows="8" placeholder='{"categories":["Sep 2024","Oct 2024"],"series":[{"name":"Ford Ranger (Current 12 months)","data":[5200,4950]},{"name":"Ford Ranger (Previous 12 months)","data":[4700,4600]}]}'>{"categories":["Jan","Feb","Mar","Apr","May"],"series":[{"name":"Sales","data":[1200,1900,3000,5000,4000]},{"name":"Revenue","data":[1000,1500,2500,4200,3800]}]}</textarea>
+            <div class="tab-content" id="json-tab">
+              <textarea id="data" rows="8" placeholder='{"categories":["Sep 2024","Oct 2024"],"series":[{"name":"Ford Ranger (Current 12 months)","data":[5200,4950],"color":"#E11D48"},{"name":"Ford Ranger (Previous 12 months)","data":[4700,4600],"color":"#7D7D83"}]}'>{"categories":["Jan","Feb","Mar","Apr","May"],"series":[{"name":"Sales","data":[1200,1900,3000,5000,4000],"color":""},{"name":"Revenue","data":[1000,1500,2500,4200,3800],"color":""}]}</textarea>
             </div>
             
-            <div class="tab-content" id="table-tab">
+            <div class="tab-content active" id="table-tab">
               <div class="table-controls">
                 <button class="add-series-btn" id="addColumn">+ Column</button>
                 <button class="add-series-btn" id="addRow">+ Row</button>
@@ -489,7 +570,7 @@
         parent.postMessage({ 
           pluginMessage: { 
             type: 'resize-window', 
-            width: 300, 
+            width: 420, 
             height: 800 
           } 
         }, '*');
@@ -502,10 +583,12 @@
     let currentData = {
       categories: ["Jan", "Feb", "Mar", "Apr", "May"],
       series: [
-        { name: "Sales", data: [1200, 1900, 3000, 5000, 4000] },
-        { name: "Revenue", data: [1000, 1500, 2500, 4200, 3800] }
+        { name: "Sales", data: [1200, 1900, 3000, 5000, 4000], color: "" },
+        { name: "Revenue", data: [1000, 1500, 2500, 4200, 3800], color: "" }
       ]
     };
+    
+    let jsonManuallyEdited = false;
 
     function switchTab(tabName) {
       // Update tab buttons
@@ -520,9 +603,19 @@
       });
       document.getElementById(`${tabName}-tab`).classList.add('active');
 
-      // Sync data when switching to table view
+      // Sync data when switching between tabs
       if (tabName === 'table') {
-        syncJsonToTable();
+        // If JSON was manually edited, sync from JSON to table
+        if (jsonManuallyEdited) {
+          syncJsonToTable();
+          jsonManuallyEdited = false; // Reset flag after syncing
+        } else {
+          // Always ensure table is rendered with current data
+          renderTable();
+        }
+      } else if (tabName === 'json') {
+        // Always sync table data to JSON when switching to JSON tab
+        syncTableToJson();
       }
     }
 
@@ -538,13 +631,17 @@
       try {
         const jsonData = JSON.parse(document.getElementById('data').value);
         if (jsonData && jsonData.categories && jsonData.series) {
+          // Update currentData with JSON data
           currentData = jsonData;
+          
+          // Re-render table with new data
           renderTable();
         }
       } catch (e) {
-        // If JSON is invalid, keep current data
+        // If JSON is invalid, keep current data and just re-render
         renderTable();
       }
+      jsonManuallyEdited = false; // Reset flag after syncing from JSON
     }
 
     function syncTableToJson() {
@@ -562,7 +659,9 @@
       // Get series data
       const headerCells = document.querySelectorAll('#headerRow th:not(:first-child)');
       headerCells.forEach((header, seriesIndex) => {
-        const seriesName = header.querySelector('input').value.trim();
+        const seriesNameInput = header.querySelector('input');
+        const seriesName = seriesNameInput ? seriesNameInput.value.trim() : '';
+        
         if (seriesName) {
           const seriesData = [];
           const dataInputs = document.querySelectorAll(`#tableBody tr td:nth-child(${seriesIndex + 2}) input`);
@@ -570,12 +669,30 @@
             const value = parseFloat(input.value) || 0;
             seriesData.push(value);
           });
-          series.push({ name: seriesName, data: seriesData });
+          
+          // Get colour from the colour input in the header cell
+          const colourPicker = header.querySelector('.series-colour-picker');
+          const colourInput = colourPicker ? colourPicker.querySelector('.series-colour-input') : null;
+          
+          let seriesColor = "";
+          
+          // Only include colour if it's actually set (colour picker has 'has-colour' class)
+          if (colourInput && colourPicker && colourPicker.classList.contains('has-colour')) {
+            seriesColor = colourInput.value;
+          }
+          
+          series.push({ name: seriesName, data: seriesData, color: seriesColor });
         }
       });
 
+      // Update currentData with the latest table data
       currentData = { categories, series };
+      
+      // Update JSON textarea
       document.getElementById('data').value = JSON.stringify(currentData, null, 2);
+      
+      // Reset flag since JSON was programmatically updated
+      jsonManuallyEdited = false;
     }
 
     function renderTable() {
@@ -587,27 +704,73 @@
       
       // Update header row with X buttons
       headerRow.innerHTML = '<th><input type="text" placeholder="Category" value="" /></th>';
+      
       currentData.series.forEach((series, index) => {
         const th = document.createElement('th');
+        th.className = 'series-header-cell';
+        
+        // Series name input
         const input = document.createElement('input');
         input.type = 'text';
+        input.className = 'series-name-input';
         input.placeholder = 'Series name';
         input.value = series.name || '';
         input.addEventListener('input', syncTableToJson);
-        th.appendChild(input);
+        
+        // Series colour picker
+        const colourPicker = document.createElement('div');
+        colourPicker.className = 'series-colour-picker';
+        colourPicker.dataset.seriesIndex = index;
+        
+        if (series.color && series.color.trim() !== '') {
+          colourPicker.classList.add('has-colour');
+          colourPicker.style.setProperty('--series-colour', series.color);
+          colourPicker.textContent = '✓';
+        } else {
+          colourPicker.classList.remove('has-colour');
+          colourPicker.textContent = '●';
+        }
+        
+        // Hidden colour input
+        const colourInput = document.createElement('input');
+        colourInput.type = 'color';
+        colourInput.className = 'series-colour-input';
+        colourInput.value = series.color && series.color.trim() !== '' ? series.color : '#000000';
+        colourInput.addEventListener('change', function() {
+          const seriesIdx = parseInt(colourPicker.dataset.seriesIndex);
+          updateSeriesColour(seriesIdx, this.value);
+        });
+        
+        colourPicker.addEventListener('click', function(e) {
+          e.stopPropagation();
+          colourInput.click();
+        });
+        
+        colourPicker.appendChild(colourInput);
         
         // Add X button for removing column (but not for categories column)
-        if (index >= 0) {
-          const removeBtn = document.createElement('button');
-          removeBtn.className = 'remove-column-btn';
-          removeBtn.innerHTML = '×';
-          removeBtn.title = 'Remove column';
-          removeBtn.addEventListener('click', () => removeColumn(index));
-          th.appendChild(removeBtn);
-        }
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-column-btn';
+        removeBtn.innerHTML = '×';
+        removeBtn.title = 'Remove column';
+        removeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          removeColumn(index);
+        });
+        
+        th.appendChild(input);
+        th.appendChild(colourPicker);
+        th.appendChild(removeBtn);
         
         headerRow.appendChild(th);
       });
+      
+      // Add empty header cell for remove row buttons at the end
+      const removeRowHeader = document.createElement('th');
+      removeRowHeader.style.width = '40px';
+      removeRowHeader.style.minWidth = '40px';
+      removeRowHeader.style.textAlign = 'center';
+      headerRow.appendChild(removeRowHeader);
 
       // Create data rows
       const maxLength = Math.max(
@@ -640,8 +803,11 @@
           row.appendChild(dataCell);
         });
 
-        // Add X button for removing row
+        // Add X button for removing row in a separate cell
         const removeRowCell = document.createElement('td');
+        removeRowCell.style.textAlign = 'center';
+        removeRowCell.style.width = '40px';
+        removeRowCell.style.minWidth = '40px';
         const removeRowBtn = document.createElement('button');
         removeRowBtn.className = 'remove-row-btn';
         removeRowBtn.innerHTML = '×';
@@ -655,9 +821,40 @@
     }
 
     function addColumn() {
-      currentData.series.push({ name: `Series ${currentData.series.length + 1}`, data: new Array(currentData.categories.length).fill(0) });
+      currentData.series.push({ name: `Series ${currentData.series.length + 1}`, data: new Array(currentData.categories.length).fill(0), color: "" });
       renderTable();
       syncTableToJson();
+    }
+
+    function updateSeriesColour(seriesIndex, colour) {
+      if (currentData.series[seriesIndex]) {
+        currentData.series[seriesIndex].color = colour;
+        
+        // Update the colour picker display without re-rendering the entire table
+        const colourPicker = document.querySelector(`[data-series-index="${seriesIndex}"]`);
+        if (colourPicker) {
+          // Get the existing colour input before updating content
+          const existingColourInput = colourPicker.querySelector('.series-colour-input');
+          
+          if (colour) {
+            colourPicker.classList.add('has-colour');
+            colourPicker.style.setProperty('--series-colour', colour);
+            colourPicker.textContent = '✓';
+          } else {
+            colourPicker.classList.remove('has-colour');
+            colourPicker.textContent = '●';
+          }
+          
+          // Re-append the colour input if it existed
+          if (existingColourInput) {
+            existingColourInput.value = colour || '#000000';
+            colourPicker.appendChild(existingColourInput);
+          }
+        }
+        
+        // Always sync to JSON to ensure persistence when switching tabs
+        syncTableToJson();
+      }
     }
 
     function removeColumn(columnIndex) {
@@ -694,8 +891,10 @@
 
     // Sync JSON to table when JSON textarea changes
     document.getElementById('data').addEventListener('input', () => {
+      jsonManuallyEdited = true; // Mark that JSON has been manually edited
       if (document.getElementById('table-tab').classList.contains('active')) {
         syncJsonToTable();
+        jsonManuallyEdited = false; // Reset since we just synced
       }
     });
 
@@ -859,14 +1058,43 @@
     }
 
     async function render() {
-      var json = parseData(document.getElementById('data').value);
+      // If we're on JSON tab and JSON was manually edited, parse from JSON textarea
+      // Otherwise use currentData
+      var json;
+      if (document.getElementById('json-tab').classList.contains('active') && jsonManuallyEdited) {
+        try {
+          json = JSON.parse(document.getElementById('data').value);
+        } catch (e) {
+          parent.postMessage({ pluginMessage: { type: 'notify', message: 'Invalid JSON format' } }, '*');
+          return;
+        }
+      } else {
+        json = currentData;
+      }
+      
       if (!json || !Array.isArray(json.series)) {
-        parent.postMessage({ pluginMessage: { type: 'notify', message: 'Invalid JSON: expected { categories, series }' } }, '*');
+        parent.postMessage({ pluginMessage: { type: 'notify', message: 'Invalid data: expected { categories, series }' } }, '*');
         return;
       }
 
       var options = baseOptions();
-      options.series = json.series;
+      
+      // Process series to handle per-series colours
+      var processedSeries = json.series.map(function(series, index) {
+        var processedSeries = {
+          name: series.name,
+          data: series.data
+        };
+        
+        // If series has a custom colour, add it to the series object
+        if (series.color && series.color.trim() !== '') {
+          processedSeries.color = series.color;
+        }
+        
+        return processedSeries;
+      });
+      
+      options.series = processedSeries;
       options.xaxis.categories = json.categories || [];
       
       // Show legend based on user preference and data
@@ -952,7 +1180,14 @@
         marker.setAttribute('cx', '6');
         marker.setAttribute('cy', '10');
         marker.setAttribute('r', '3');
-        marker.setAttribute('fill', BRAND.palette[index % BRAND.palette.length]);
+        
+        // Use series-specific colour if available, otherwise fall back to palette
+        var seriesColour = series.color;
+        if (!seriesColour || seriesColour.trim() === '') {
+          var currentPalette = parseCustomColours() || BRAND.palette;
+          seriesColour = currentPalette[index % currentPalette.length];
+        }
+        marker.setAttribute('fill', seriesColour);
         
         // Create legend text
         var text = document.createElementNS('http://www.w3.org/2000/svg', 'text');

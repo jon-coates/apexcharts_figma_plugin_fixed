@@ -2032,28 +2032,20 @@
         console.log('Assigned categories to xaxis:', options.xaxis.categories);
       }
       
-      // Handle shape-based markers using ApexCharts shape array
+      // Handle shape-based markers using ApexCharts native shape arrays
       var markerStyle = document.getElementById('markerStyle').value;
       if (markerStyle === 'shape' && (type === 'line' || type === 'area')) {
-        // All supported ApexCharts marker shapes
-        var shapes = ['circle', 'square', 'plus', 'cross', 'star', 'sparkle', 'diamond', 'triangle'];
+        var shapes = ['circle', 'square', 'star', 'sparkle', 'diamond', 'triangle'];
         
-        // Create shape array based on number of series
-        var shapeArray = [];
-        for (var i = 0; i < options.series.length; i++) {
-          shapeArray.push(shapes[i % shapes.length]);
-        }
+        // Create shape array for all series
+        var shapeArray = options.series.map(function(series, index) {
+          return shapes[index % shapes.length];
+        });
         
-        // Apply shape array to markers configuration
+        // Set the shape array in marker configuration
         options.markers.shape = shapeArray;
         
-        console.log('Applied shape array to markers:', shapeArray);
-        console.log('Series count:', options.series.length);
-        
-        // Log the mapping for debugging
-        options.series.forEach(function(series, index) {
-          console.log(`Series "${series.name}" (${index}): ${shapeArray[index]} shape`);
-        });
+        console.log('Applied shapes:', options.series.map((s, i) => `${s.name}: ${shapeArray[i]}`));
       }
       
       // Show legend based on user preference and data

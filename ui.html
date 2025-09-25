@@ -68,12 +68,35 @@
       display: none;
     }
     
-    .section-title {
+    .main-title {
       font-size: 20px;
       font-weight: 600;
       color: #374151;
-      margin-bottom: 16px;
+      margin-bottom: 20px;
       text-align: left;
+      position: relative;
+    }
+
+    .config-section-group {
+      margin-bottom: 20px;
+      background: white;
+      border-radius: 8px;
+      border: 1px solid #E5E7EB;
+    }
+
+    .section-header {
+      font-size: 14px;
+      font-weight: 600;
+      color: #374151;
+      padding: 12px 16px;
+      background: #F9FAFB;
+      border-bottom: 1px solid #E5E7EB;
+      border-radius: 8px 8px 0 0;
+      margin: 0;
+    }
+
+    .section-content {
+      padding: 16px;
     }
     
     .row { 
@@ -509,143 +532,173 @@
     <div class="config-section" id="configSection">
       <div class="config-content">
         <div class="config-header">
-          <div class="section-title">Chart Settings</div>
+          <div class="main-title">Chart Settings</div>
           <button class="toggle-button" id="togglePreview" title="Toggle preview">
             ←
           </button>
         </div>
         
-        <div class="row">
-          <label for="title">Chart title</label>
-          <input id="title" placeholder="e.g., Monthly VFACTS Sales" />
+        <!-- Chart Basics Section -->
+        <div class="config-section-group">
+          <div class="section-header">Chart Basics</div>
+          <div class="section-content">
+            <div class="row">
+              <label for="title">Chart title</label>
+              <input id="title" placeholder="e.g., Monthly VFACTS Sales" />
+            </div>
+
+            <div class="row">
+              <label for="type">Type</label>
+              <select id="type">
+                <option value="line">Line</option>
+                <option value="bar" selected>Bar</option>
+                <option value="area">Area</option>
+              </select>
+            </div>
+
+            <div class="row" id="horizontalToggleRow" style="display: none;">
+              <label for="horizontal">Horizontal</label>
+              <input id="horizontal" type="checkbox" />
+            </div>
+
+            <div class="row" id="stackedToggleRow" style="display: none;">
+              <label for="stacked">Stacked</label>
+              <input id="stacked" type="checkbox" checked />
+            </div>
+
+            <div class="row" id="percentageToggleRow" style="display: none;">
+              <label for="percentage">100% stacked</label>
+              <input id="percentage" type="checkbox" />
+            </div>
+          </div>
         </div>
 
-        <div class="row">
-          <label for="type">Type</label>
-          <select id="type">
-            <option value="line">Line</option>
-            <option value="bar" selected>Bar</option>
-            <option value="area">Area</option>
-          </select>
-        </div>
-
-        <div class="row" id="horizontalToggleRow" style="display: none;">
-          <label for="horizontal">Horizontal</label>
-          <input id="horizontal" type="checkbox" />
-        </div>
-
-        <div class="row" id="stackedToggleRow" style="display: none;">
-          <label for="stacked">Stacked</label>
-          <input id="stacked" type="checkbox" checked />
-        </div>
-
-        <div class="row" id="percentageToggleRow" style="display: none;">
-          <label for="percentage">100% stacked</label>
-          <input id="percentage" type="checkbox" checked />
-        </div>
-
-        <div class="row" id="markerStyleRow" style="display: none;">
-          <label for="markerStyle">Marker style</label>
-          <select id="markerStyle">
-            <option value="none">None</option>
-            <option value="uniform" selected>Uniform</option>
-            <option value="shape">Shape</option>
-          </select>
-        </div>
-
-        <div class="row">
-          <label for="widthPreset">Width</label>
-          <select id="widthPreset">
-            <option value="article-desktop">Article Desktop (740px)</option>
-            <option value="article-mobile">Article Mobile (350px)</option>
-            <option value="full-width">Full width (1180px)</option>
-            <option value="custom">Custom</option>
-          </select>
-        </div>
-        
-        <div class="row" id="customWidthRow" style="display: none;">
-          <label for="width">Width (px)</label>
-          <input id="width" type="number" placeholder="600" />
-        </div>
-        
-        <div class="row">
-          <label for="height">Height (px)</label>
-          <input id="height" type="number" placeholder="400" />
-        </div>
-
-        <div class="row">
-          <label for="showLegend">Show legend</label>
-          <input id="showLegend" type="checkbox" checked />
-        </div>
-
-        <div class="row">
-          <label for="showDataLabels">Show data labels</label>
-          <input id="showDataLabels" type="checkbox" checked />
-        </div>
-
-        <div class="row" id="dataLabelColourRow" style="display: flex;">
-          <label for="whiteDataLabels">White data labels</label>
-          <input id="whiteDataLabels" type="checkbox" />
-        </div>
-
-        <div class="row">
-          <label>Chart theme</label>
-          <select id="chartTheme">
-            <option value="neutral">Neutral (all grey)</option>
-            <option value="brand">Brand (all red)</option>
-            <option value="secondary">Secondary (all blue)</option>
-            <option value="categorical">Categorical (multi-colour)</option>
-            <option value="diverging-1">Diverging 1 (red to green)</option>
-            <option value="diverging-2">Diverging 2 (green to red)</option>
-            <option value="diverging-3">Diverging 3 (red to blue)</option>
-          </select>
-        </div>
-
-        <div class="row">
-          <label>Colour by</label>
-          <select id="colourBy">
-            <option value="series">Series</option>
-            <option value="category">Category</option>
-          </select>
-        </div>
-
-        <div class="row">
-          <label>Highlight</label>
-          <select id="highlightMode">
-            <option value="none">None</option>
-            <option value="series">Series</option>
-            <option value="category">Category</option>
-          </select>
-        </div>
-
-        <div class="tab-container">
-            <div class="tab-nav">
-              <button class="tab-button active" data-tab="table">Table</button>
-              <button class="tab-button" data-tab="json">JSON</button>
+        <!-- Dimensions Section -->
+        <div class="config-section-group">
+          <div class="section-header">Dimensions</div>
+          <div class="section-content">
+            <div class="row">
+              <label for="widthPreset">Width</label>
+              <select id="widthPreset">
+                <option value="article-desktop">Article Desktop (740px)</option>
+                <option value="article-mobile">Article Mobile (350px)</option>
+                <option value="full-width">Full width (1180px)</option>
+                <option value="custom">Custom</option>
+              </select>
             </div>
             
-            <div class="tab-content" id="json-tab">
-              <textarea id="data" rows="8" placeholder='{"categories":["Sep 2024","Oct 2024"],"series":[{"name":"Ford Ranger (Current 12 months)","data":[5200,4950],"color":"#E11D48"},{"name":"Ford Ranger (Previous 12 months)","data":[4700,4600],"color":"#7D7D83"}]}'>{"categories":["Jan","Feb","Mar","Apr","May"],"series":[{"name":"Sales","data":[1200,1900,3000,5000,4000],"color":""},{"name":"Revenue","data":[1000,1500,2500,4200,3800],"color":""}]}</textarea>
+            <div class="row" id="customWidthRow" style="display: none;">
+              <label for="width">Width (px)</label>
+              <input id="width" type="number" placeholder="600" />
             </div>
             
-            <div class="tab-content active" id="table-tab">
-              <div class="table-controls">
-                <button class="add-series-btn" id="addColumn">+ Column</button>
-                <button class="add-series-btn" id="addRow">+ Row</button>
-              </div>
-              <div class="table-container">
-                <table class="data-table" id="dataTable">
-                  <thead>
-                    <tr id="headerRow">
-                      <th>Categories</th>
-                    </tr>
-                  </thead>
-                  <tbody id="tableBody">
-                    <!-- Table rows will be generated dynamically -->
-                  </tbody>
-                </table>
-              </div>
+            <div class="row">
+              <label for="height">Height (px)</label>
+              <input id="height" type="number" placeholder="400" />
             </div>
+          </div>
+        </div>
+
+        <!-- Visual Styling Section -->
+        <div class="config-section-group">
+          <div class="section-header">Visual Styling</div>
+          <div class="section-content">
+            <div class="row">
+              <label>Chart theme</label>
+              <select id="chartTheme">
+                <option value="brand" selected>Brand (all red)</option>
+                <option value="neutral">Neutral (all grey)</option>
+                <option value="secondary">Secondary (all blue)</option>
+                <option value="categorical">Categorical (multi-colour)</option>
+                <option value="diverging-1">Diverging 1 (red to green)</option>
+                <option value="diverging-2">Diverging 2 (green to red)</option>
+                <option value="diverging-3">Diverging 3 (red to blue)</option>
+              </select>
+            </div>
+
+            <div class="row">
+              <label>Colour by</label>
+              <select id="colourBy">
+                <option value="series">Series</option>
+                <option value="category">Category</option>
+              </select>
+            </div>
+
+            <div class="row">
+              <label>Highlight</label>
+              <select id="highlightMode">
+                <option value="none">None</option>
+                <option value="series">Series</option>
+                <option value="category">Category</option>
+              </select>
+            </div>
+
+            <div class="row" id="markerStyleRow" style="display: none;">
+              <label for="markerStyle">Marker style</label>
+              <select id="markerStyle">
+                <option value="none">None</option>
+                <option value="uniform" selected>Uniform</option>
+                <option value="shape">Shape</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Display Options Section -->
+        <div class="config-section-group">
+          <div class="section-header">Display Options</div>
+          <div class="section-content">
+            <div class="row">
+              <label for="showLegend">Show legend</label>
+              <input id="showLegend" type="checkbox" checked />
+            </div>
+
+            <div class="row">
+              <label for="showDataLabels">Show data labels</label>
+              <input id="showDataLabels" type="checkbox" />
+            </div>
+
+            <div class="row" id="dataLabelColourRow" style="display: flex;">
+              <label for="whiteDataLabels">White data labels</label>
+              <input id="whiteDataLabels" type="checkbox" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Data Input Section -->
+        <div class="config-section-group">
+          <div class="section-header">Data Input</div>
+          <div class="section-content">
+            <div class="tab-container">
+                <div class="tab-nav">
+                  <button class="tab-button active" data-tab="table">Table</button>
+                  <button class="tab-button" data-tab="json">JSON</button>
+                </div>
+                
+                <div class="tab-content" id="json-tab">
+                  <textarea id="data" rows="8" placeholder='{"categories":["Sep 2024","Oct 2024"],"series":[{"name":"Ford Ranger (Current 12 months)","data":[5200,4950],"color":"#E11D48"},{"name":"Ford Ranger (Previous 12 months)","data":[4700,4600],"color":"#7D7D83"}]}'>{"categories":["Jan","Feb","Mar","Apr","May"],"series":[{"name":"Sales","data":[1200,1900,3000,5000,4000],"color":""},{"name":"Revenue","data":[1000,1500,2500,4200,3800],"color":""}]}</textarea>
+                </div>
+                
+                <div class="tab-content active" id="table-tab">
+                  <div class="table-controls">
+                    <button class="add-series-btn" id="addColumn">+ Column</button>
+                    <button class="add-series-btn" id="addRow">+ Row</button>
+                  </div>
+                  <div class="table-container">
+                    <table class="data-table" id="dataTable">
+                      <thead>
+                        <tr id="headerRow">
+                          <th>Categories</th>
+                        </tr>
+                      </thead>
+                      <tbody id="tableBody">
+                        <!-- Table rows will be generated dynamically -->
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+            </div>
+          </div>
         </div>
       </div>
       
@@ -1308,7 +1361,7 @@
       axisColor: "#334155",     // axis/labels
       subtitleColor: "#475569",
       gridColor: "#E2E8F0",
-      palette: ["#AFAFB3"], // Default to neutral theme
+      palette: ["#EB0800"], // Default to brand theme
       sizes: { label: "12px", legend: "12px", title: "16px", subtitle: "12px", dataLabel: "12px" },
       weights: { label: 400, legend: 500, title: 600, subtitle: 500, dataLabel: 600 }
     };

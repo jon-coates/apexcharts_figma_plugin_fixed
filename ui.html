@@ -669,6 +669,20 @@
         <div class="config-section-group">
           <div class="section-header">Data Input</div>
           <div class="section-content">
+            <div class="row">
+              <label for="dataPreset">Sample data</label>
+              <select id="dataPreset">
+                <option value="">Choose a preset...</option>
+                <option value="ute-battle">Ute Battle: Ranger vs HiLux</option>
+                <option value="brand-evolution">Brand Market Share Evolution</option>
+                <option value="electrification">Electrification Takeover</option>
+                <option value="luxury-monthly">Tesla vs Traditional Luxury</option>
+                <option value="state-preferences">State Vehicle Preferences</option>
+                <option value="chinese-brands">Chinese Brand Penetration</option>
+                <option value="eofy-pattern">End-of-Financial-Year Pattern</option>
+                <option value="prado-shortage">Toyota Prado Shortage</option>
+              </select>
+            </div>
             <div class="tab-container">
                 <div class="tab-nav">
                   <button class="tab-button active" data-tab="table">Table</button>
@@ -1344,6 +1358,16 @@
       applyTheme(selectedTheme);
     });
 
+    // Preset selection event listener
+    document.getElementById('dataPreset').addEventListener('change', function() {
+      const selectedPreset = this.value;
+      if (selectedPreset) {
+        loadPreset(selectedPreset);
+        // Reset selection to show placeholder
+        this.value = '';
+      }
+    });
+
     // Sync JSON to table when JSON textarea changes
     document.getElementById('data').addEventListener('input', () => {
       jsonManuallyEdited = true; // Mark that JSON has been manually edited
@@ -1375,6 +1399,148 @@
       "diverging-1": ["#EB0800", "#FF9800", "#FFEB3B", "#8BC34A", "#4CAF50"],
       "diverging-2": ["#4CAF50", "#8BC34A", "#FFEB3B", "#FF9800", "#EB0800"],
       "diverging-3": ["#EB0800", "#E91E63", "#9C27B0", "#673AB7", "#0A6EFA"]
+    };
+
+    // Mock data presets based on VFACTS scenarios
+    var MOCK_PRESETS = {
+      "ute-battle": {
+        title: "Australian Ute Market Share by Month 2024",
+        type: "bar",
+        stacked: true,
+        percentage: true,
+        theme: "categorical",
+        data: {
+          categories: ["Jan 2024", "Feb 2024", "Mar 2024", "Apr 2024", "May 2024", "Jun 2024"],
+          series: [
+            {"name": "Ford Ranger", "data": [4200, 4350, 4100, 4500, 4250, 4400], "color": ""},
+            {"name": "Toyota HiLux", "data": [3800, 3900, 3750, 4100, 3950, 4000], "color": ""},
+            {"name": "Isuzu D-Max", "data": [1200, 1150, 1300, 1250, 1180, 1220], "color": ""},
+            {"name": "Mazda BT-50", "data": [800, 850, 900, 820, 880, 900], "color": ""},
+            {"name": "Mitsubishi Triton", "data": [700, 720, 680, 750, 730, 780], "color": ""}
+          ]
+        }
+      },
+      
+      "brand-evolution": {
+        title: "Top 5 Brand Market Share Evolution 2023-2024",
+        type: "area",
+        theme: "brand",
+        data: {
+          categories: ["Q1 2023", "Q2 2023", "Q3 2023", "Q4 2023", "Q1 2024", "Q2 2024", "Q3 2024", "Q4 2024"],
+          series: [
+            {"name": "Toyota", "data": [52000, 54000, 48000, 58000, 55000, 57000, 51000, 60000], "color": ""},
+            {"name": "Mazda", "data": [28000, 29000, 26000, 32000, 30000, 31000, 28000, 33000], "color": ""},
+            {"name": "Ford", "data": [22000, 24000, 23000, 28000, 26000, 28000, 27000, 30000], "color": ""},
+            {"name": "Kia", "data": [18000, 19000, 17000, 21000, 20000, 21000, 19000, 22000], "color": ""},
+            {"name": "Hyundai", "data": [17000, 18000, 16000, 20000, 19000, 20000, 18000, 21000], "color": ""}
+          ]
+        }
+      },
+      
+      "electrification": {
+        title: "Australian Vehicle Sales by Powertrain Type",
+        type: "bar",
+        stacked: true,
+        percentage: true,
+        theme: "categorical",
+        data: {
+          categories: ["2022", "2023", "2024", "2025 YTD"],
+          series: [
+            {"name": "Petrol", "data": [750000, 720000, 680000, 320000], "color": ""},
+            {"name": "Diesel", "data": [280000, 270000, 260000, 120000], "color": ""},
+            {"name": "Hybrid", "data": [45000, 58000, 102000, 65000], "color": ""},
+            {"name": "PHEV", "data": [8000, 12000, 24000, 18000], "color": ""},
+            {"name": "Battery EV", "data": [35000, 87000, 91000, 55000], "color": ""}
+          ]
+        }
+      },
+      
+      "luxury-monthly": {
+        title: "Luxury Brand Monthly Sales 2024",
+        type: "line",
+        theme: "categorical",
+        markerSize: 6,
+        data: {
+          categories: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+          series: [
+            {"name": "Tesla", "data": [2800, 3200, 4100, 3600, 3800, 5200, 4800, 4200, 3900, 4300, 4600, 5800], "color": ""},
+            {"name": "Mercedes-Benz", "data": [2200, 2100, 2300, 2000, 1900, 2400, 2200, 2000, 1800, 2100, 2300, 2600], "color": ""},
+            {"name": "BMW", "data": [1800, 1900, 2000, 1700, 1600, 2100, 1900, 1700, 1500, 1800, 2000, 2200], "color": ""},
+            {"name": "Audi", "data": [1200, 1100, 1300, 1000, 900, 1400, 1200, 1000, 800, 1100, 1300, 1500], "color": ""}
+          ]
+        }
+      },
+      
+      "state-preferences": {
+        title: "Vehicle Type Preferences by State 2024",
+        type: "bar",
+        horizontal: true,
+        stacked: true,
+        percentage: true,
+        theme: "categorical",
+        data: {
+          categories: ["NSW", "VIC", "QLD", "WA", "SA", "TAS", "ACT", "NT"],
+          series: [
+            {"name": "SUVs", "data": [45000, 42000, 32000, 18000, 12000, 3500, 4200, 2800], "color": ""},
+            {"name": "Utes", "data": [25000, 22000, 28000, 22000, 8000, 2800, 1200, 3200], "color": ""},
+            {"name": "Passenger Cars", "data": [20000, 18000, 12000, 8000, 6000, 1800, 2800, 1000], "color": ""},
+            {"name": "EVs", "data": [8000, 12000, 6000, 4000, 3000, 800, 2000, 600], "color": ""}
+          ]
+        }
+      },
+      
+      "chinese-brands": {
+        title: "Chinese Brand Sales Growth in Australia",
+        type: "area",
+        stacked: true,
+        theme: "secondary",
+        data: {
+          categories: ["2021", "2022", "2023", "2024", "2025 YTD"],
+          series: [
+            {"name": "BYD", "data": [500, 2100, 12400, 18500, 12000], "color": ""},
+            {"name": "GWM", "data": [3200, 8500, 15600, 21200, 14800], "color": ""},
+            {"name": "MG", "data": [8900, 15200, 18800, 22400, 15600], "color": ""},
+            {"name": "LDV", "data": [4500, 6800, 8900, 11200, 7800], "color": ""},
+            {"name": "Chery", "data": [0, 0, 2400, 8600, 6200], "color": ""}
+          ]
+        }
+      },
+      
+"eofy-pattern": {
+  title: "Monthly Sales Pattern - Financial Year Effect",
+  type: "line",
+  theme: "neutral",
+  stacked: false,
+  markerStyle: "shape",
+  highlightMode: "category",
+  colourBy: "category",
+  data: {
+    categories: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+    categoryColours: ["", "", "", "", "", "#EB0800", "", "", "", "", "", ""],
+    series: [
+      {"name": "2022", "data": [95000, 88000, 102000, 98000, 115000, 125000, 92000, 89000, 94000, 98000, 105000, 88000], "color": ""},
+      {"name": "2023", "data": [98000, 92000, 108000, 105000, 118000, 132000, 96000, 94000, 99000, 103000, 110000, 92000], "color": ""},
+      {"name": "2024", "data": [102000, 96000, 112000, 108000, 122000, 138000, 99000, 97000, 102000, 106000, 114000, 95000], "color": ""}
+    ]
+  }
+},
+      
+      "prado-shortage": {
+        title: "Toyota Model Sales During Prado Transition",
+        type: "line",
+        theme: "categorical",
+        markerSize: 6,
+        data: {
+          categories: ["Jan 2024", "Feb 2024", "Mar 2024", "Apr 2024", "May 2024", "Jun 2024", "Jul 2024", "Aug 2024"],
+          series: [
+            {"name": "Prado (Old Gen)", "data": [1800, 1200, 800, 400, 100, 0, 0, 0], "color": "#E11D48"},
+            {"name": "Prado (New Gen)", "data": [0, 0, 0, 0, 0, 200, 800, 1600], "color": "#E11D48"},
+            {"name": "RAV4 (Compensating)", "data": [6500, 7200, 8100, 8800, 9200, 9800, 9500, 9200], "color": ""},
+            {"name": "LandCruiser 300", "data": [800, 750, 720, 680, 650, 600, 620, 680], "color": ""},
+            {"name": "LandCruiser 70", "data": [400, 380, 360, 340, 320, 300, 320, 350], "color": ""}
+          ]
+        }
+      }
     };
 
     // ── Tinting utility functions ─────────────────────────────────────────────
@@ -2276,6 +2442,75 @@
     }
 
     // Chart type change handler
+    function loadPreset(presetKey) {
+      if (!presetKey || !MOCK_PRESETS[presetKey]) {
+        return;
+      }
+      
+      const preset = MOCK_PRESETS[presetKey];
+      
+      // Set title
+      document.getElementById('title').value = preset.title;
+      
+      // Set chart type
+      document.getElementById('type').value = preset.type;
+      handleChartTypeChange(); // Refresh UI for type-specific options
+      
+      // Set chart options
+      if (preset.horizontal) {
+        document.getElementById('horizontal').checked = preset.horizontal;
+      }
+      if (preset.stacked) {
+        document.getElementById('stacked').checked = preset.stacked;
+      }
+      if (preset.percentage) {
+        document.getElementById('percentage').checked = preset.percentage;
+      }
+      
+      // Set theme
+      if (preset.theme) {
+        document.getElementById('chartTheme').value = preset.theme;
+        applyTheme(preset.theme);
+      }
+      
+      // Set marker style
+      if (preset.markerStyle) {
+        document.getElementById('markerStyle').value = preset.markerStyle;
+      }
+      
+      // Set highlight mode
+      if (preset.highlightMode) {
+        document.getElementById('highlightMode').value = preset.highlightMode;
+        handleHighlightModeChange();
+      }
+      
+      // Set colour by
+      if (preset.colourBy) {
+        document.getElementById('colourBy').value = preset.colourBy;
+        handleColourByChange();
+      }
+      
+      // Load data
+      currentData = {
+        categories: preset.data.categories,
+        series: preset.data.series,
+        categoryColours: preset.data.categoryColours || new Array(preset.data.categories.length).fill('')
+      };
+      
+      // Update JSON textarea
+      document.getElementById('data').value = JSON.stringify(currentData, null, 2);
+      
+      // Re-render table if we're on table tab
+      if (document.getElementById('table-tab').classList.contains('active')) {
+        renderTable();
+      }
+      
+      // Reset flags
+      jsonManuallyEdited = false;
+      
+      console.log('Loaded preset:', presetKey);
+    }
+
     function handleChartTypeChange() {
       var chartType = document.getElementById('type').value;
       var horizontalRow = document.getElementById('horizontalToggleRow');

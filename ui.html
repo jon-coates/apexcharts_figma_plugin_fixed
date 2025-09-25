@@ -538,6 +538,11 @@
           <input id="stacked" type="checkbox" />
         </div>
 
+        <div class="row" id="percentageToggleRow" style="display: none;">
+          <label for="percentage">100% stacked</label>
+          <input id="percentage" type="checkbox" />
+        </div>
+
         <div class="row" id="markerSizeRow" style="display: none;">
           <label for="markerSize">Marker size</label>
           <input id="markerSize" type="number" placeholder="6" min="0" max="20" />
@@ -1449,6 +1454,7 @@
       var height = parseInt(document.getElementById('height').value, 10) || 400;
       var isHorizontal = type === "bar" && document.getElementById('horizontal').checked;
       var isStacked = type === "bar" && document.getElementById('stacked').checked;
+      var isPercentage = type === "bar" && document.getElementById('percentage').checked;
       var showDataLabels = document.getElementById('showDataLabels').checked;
 
       return {
@@ -1508,6 +1514,9 @@
           crosshairs: {
             show: false
           },
+          // Set fixed range for percentage charts
+          min: (isPercentage && isStacked) ? 0 : undefined,
+          max: (isPercentage && isStacked) ? 100 : undefined,
           labels: {
             formatter: function(v, opts) { 
               if (isHorizontal) {
@@ -1518,7 +1527,9 @@
                 }
                 return v;
               } else {
-                return Number(v).toLocaleString();
+                // Add % suffix for percentage charts
+                var formattedValue = Number(v).toLocaleString();
+                return (isPercentage && isStacked) ? formattedValue + '%' : formattedValue;
               }
             },
             style: {
@@ -1596,6 +1607,7 @@
             // Use the stored horizontal state and categories from chart config
             var isHorizontalChart = w.config.isHorizontal || false;
             var categories = w.config.chartCategories || [];
+            var isPercentageChart = w.config.isPercentage || false;
             
             // For horizontal charts, the data is in x,y format
             var categoryValue, value;
@@ -1612,6 +1624,7 @@
             // Debug logging
             console.log('Tooltip debug:', {
               isHorizontalChart: isHorizontalChart,
+              isPercentageChart: isPercentageChart,
               dataPointIndex: dataPointIndex,
               chartCategories: categories,
               categoryValue: categoryValue,
@@ -1634,6 +1647,14 @@
                 } else {
                   // Traditional format
                   seriesValue = Number(seriesData[dataPointIndex]).toLocaleString();
+                }
+                
+                // For percentage charts, show both percentage and original value
+                if (isPercentageChart && w.config.series[index].originalData) {
+                  var originalValue = w.config.series[index].originalData[dataPointIndex];
+                  var percentageText = Number(seriesValue).toLocaleString() + '%';
+                  var originalText = '(' + Number(originalValue).toLocaleString() + ')';
+                  seriesValue = percentageText + ' ' + originalText;
                 }
                 
                 // For category mode, try to get the actual colour from the data point
@@ -1660,6 +1681,39 @@
 
         series: []
       };
+    }
+
+    function convertToPercentages(seriesData, categories) {
+      console.log('Converting data to percentages...');
+      
+      // Calculate totals for each category
+      const categoryTotals = categories.map((category, categoryIndex) => {
+        const total = seriesData.reduce((sum, series) => {
+          const value = series.data[categoryIndex] || 0;
+          return sum + Math.abs(value); // Use absolute values for percentage calculation
+        }, 0);
+        console.log('Total for', category, ':', total);
+        return total;
+      });
+      
+      // Convert each data point to percentage
+      const convertedSeries = seriesData.map((series, seriesIndex) => {
+        const convertedData = series.data.map((value, categoryIndex) => {
+          const total = categoryTotals[categoryIndex];
+          const percentage = total > 0 ? (Math.abs(value) / total) * 100 : 0;
+          console.log(`${series.name}[${categoryIndex}]: ${value} -> ${percentage.toFixed(1)}%`);
+          return percentage;
+        });
+        
+        return {
+          ...series,
+          data: convertedData,
+          originalData: series.data // Store original data for tooltips
+        };
+      });
+      
+      console.log('Percentage conversion complete');
+      return convertedSeries;
     }
 
     async function render() {
@@ -1698,12 +1752,26 @@
 
       var options = baseOptions();
       
+      // Apply percentage conversion if enabled
+      var type = document.getElementById('type').value;
+      var isStacked = type === "bar" && document.getElementById('stacked').checked;
+      var isPercentage = type === "bar" && document.getElementById('percentage').checked;
+      
+      var processedJsonSeries = json.series;
+      if (isPercentage && isStacked) {
+        processedJsonSeries = convertToPercentages(json.series, json.categories);
+        console.log('Applied percentage conversion to data');
+      } else if (isPercentage && !isStacked) {
+        // Percentage only makes sense for stacked charts - ignore if not stacked
+        console.warn('Percentage mode ignored - requires stacked to be enabled');
+      }
+      
       // Get colour assignment mode
       var colourBy = document.getElementById('colourBy').value;
       var highlightMode = document.getElementById('highlightMode').value;
       
       // Process series based on colour assignment mode
-      var processedSeries = json.series.map(function(series, index) {
+      var processedSeries = processedJsonSeries.map(function(series, index) {
         var processedSeries = {
           name: series.name,
           data: series.data
@@ -1888,6 +1956,9 @@
       var showLegend = legendCheckbox && hasMultipleSeriesOrNames;
       options.legend.show = showLegend;
 
+      // Add percentage state to chart configuration for tooltip access
+      options.isPercentage = isPercentage && isStacked;
+
       var el = document.getElementById('preview');
       el.innerHTML = '';
       
@@ -2058,19 +2129,23 @@
       var chartType = document.getElementById('type').value;
       var horizontalRow = document.getElementById('horizontalToggleRow');
       var stackedRow = document.getElementById('stackedToggleRow');
+      var percentageRow = document.getElementById('percentageToggleRow');
       var markerSizeRow = document.getElementById('markerSizeRow');
       
       if (chartType === 'bar') {
         horizontalRow.style.display = 'flex';
         stackedRow.style.display = 'flex';
+        percentageRow.style.display = 'flex';
         markerSizeRow.style.display = 'none';
       } else if (chartType === 'line') {
         horizontalRow.style.display = 'none';
         stackedRow.style.display = 'none';
+        percentageRow.style.display = 'none';
         markerSizeRow.style.display = 'flex';
       } else {
         horizontalRow.style.display = 'none';
         stackedRow.style.display = 'none';
+        percentageRow.style.display = 'none';
         markerSizeRow.style.display = 'none';
       }
     }

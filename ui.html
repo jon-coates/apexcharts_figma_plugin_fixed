@@ -489,6 +489,7 @@
       border-radius: 2px;
     }
 
+
   </style>
   <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
   <script>
@@ -523,7 +524,7 @@
           <label for="type">Type</label>
           <select id="type">
             <option value="line">Line</option>
-            <option value="bar">Bar</option>
+            <option value="bar" selected>Bar</option>
             <option value="area">Area</option>
           </select>
         </div>
@@ -535,12 +536,12 @@
 
         <div class="row" id="stackedToggleRow" style="display: none;">
           <label for="stacked">Stacked</label>
-          <input id="stacked" type="checkbox" />
+          <input id="stacked" type="checkbox" checked />
         </div>
 
         <div class="row" id="percentageToggleRow" style="display: none;">
           <label for="percentage">100% stacked</label>
-          <input id="percentage" type="checkbox" />
+          <input id="percentage" type="checkbox" checked />
         </div>
 
         <div class="row" id="markerSizeRow" style="display: none;">
@@ -575,7 +576,12 @@
 
         <div class="row">
           <label for="showDataLabels">Show data labels</label>
-          <input id="showDataLabels" type="checkbox" />
+          <input id="showDataLabels" type="checkbox" checked />
+        </div>
+
+        <div class="row" id="dataLabelColourRow" style="display: flex;">
+          <label for="whiteDataLabels">White data labels</label>
+          <input id="whiteDataLabels" type="checkbox" />
         </div>
 
         <div class="row">
@@ -707,12 +713,12 @@
 
     // ── Tab functionality ─────────────────────────────────────────────────
     let currentData = {
-      categories: ["Jan", "Feb", "Mar", "Apr", "May"],
+      categories: ["UTE Market Share", "SUV Market Share", "Sedan Market Share", "Hatchback Market Share"],
       series: [
-        { name: "Sales", data: [1200, 1900, 3000, 5000, 4000], color: "" },
-        { name: "Revenue", data: [1000, 1500, 2500, 4200, 3800], color: "" }
+        { name: "Brand A", data: [66.66666667, 25.33333333, 5.55555556, 2.44444444], color: "" },
+        { name: "Brand B", data: [33.33333333, 74.66666667, 94.44444444, 97.55555556], color: "" }
       ],
-      categoryColours: ["", "", "", "", ""]
+      categoryColours: ["", "", "", ""]
     };
     
     let jsonManuallyEdited = false;
@@ -1386,6 +1392,19 @@
       
       return rgbToHex(r, g, b);
     }
+
+    function formatPercentageValue(val) {
+      // Handle small values and rounding - same logic as data labels
+      if (val < 0.1 && val > 0) {
+        return '<0.1';
+      } else if (val === 0) {
+        return '0';
+      } else {
+        // Round to 1 decimal place, but remove trailing zero
+        var rounded = Math.round(val * 10) / 10;
+        return (rounded % 1 === 0) ? Math.round(rounded).toString() : rounded.toString();
+      }
+    }
     
     // Set initial theme based on current palette (after BRAND is defined)
     const currentTheme = detectCurrentTheme();
@@ -1514,9 +1533,9 @@
           crosshairs: {
             show: false
           },
-          // Set fixed range for percentage charts
-          min: (isPercentage && isStacked) ? 0 : undefined,
-          max: (isPercentage && isStacked) ? 100 : undefined,
+          // Set fixed range for percentage charts (all types)
+          min: isPercentage ? 0 : undefined,
+          max: isPercentage ? 100 : undefined,
           labels: {
             formatter: function(v, opts) { 
               if (isHorizontal) {
@@ -1527,9 +1546,9 @@
                 }
                 return v;
               } else {
-                // Add % suffix for percentage charts
+                // Add % suffix for percentage charts (all types)
                 var formattedValue = Number(v).toLocaleString();
-                return (isPercentage && isStacked) ? formattedValue + '%' : formattedValue;
+                return isPercentage ? formattedValue + '%' : formattedValue;
               }
             },
             style: {
@@ -1572,8 +1591,23 @@
           style: {
             fontSize: BRAND.sizes.dataLabel,
             fontFamily: BRAND.fontFamily,
-            fontWeight: BRAND.weights.dataLabel,
-            colors: [BRAND.foreColor]
+            fontWeight: 'bold',
+            background: {
+              enabled: true,
+            },
+            colors: [document.getElementById('whiteDataLabels').checked ? '#FFFFFF' : BRAND.foreColor]
+          },
+
+          formatter: function(val, opts) {
+            // Check if this is a percentage chart
+            var isPercentageChart = opts.w.config.isPercentage || false;
+            
+            if (isPercentageChart) {
+              return formatPercentageValue(val) + '%';
+            } else {
+              // Regular number formatting with locale
+              return Number(val).toLocaleString();
+            }
           }
         },
 
@@ -1640,21 +1674,26 @@
                 var seriesValue;
                 var seriesColor = w.config.colors[index % w.config.colors.length];
                 
-                // Handle different data formats
+                // Handle different data formats and percentage formatting
+                var displayValue;
                 if (isHorizontalChart && typeof seriesData[dataPointIndex] === 'object') {
-                  // Data is in {x: category, y: value} format
-                  seriesValue = Number(seriesData[dataPointIndex].y).toLocaleString();
+                  displayValue = seriesData[dataPointIndex].y;
                 } else {
-                  // Traditional format
-                  seriesValue = Number(seriesData[dataPointIndex]).toLocaleString();
+                  displayValue = seriesData[dataPointIndex];
                 }
                 
-                // For percentage charts, show both percentage and original value
                 if (isPercentageChart && w.config.series[index].originalData) {
+                  // Show both percentage and original value
                   var originalValue = w.config.series[index].originalData[dataPointIndex];
-                  var percentageText = Number(seriesValue).toLocaleString() + '%';
+                  var percentageText = formatPercentageValue(displayValue) + '%';
                   var originalText = '(' + Number(originalValue).toLocaleString() + ')';
                   seriesValue = percentageText + ' ' + originalText;
+                } else if (isPercentageChart) {
+                  // Show just percentage (no original data available)
+                  seriesValue = formatPercentageValue(displayValue) + '%';
+                } else {
+                  // Regular number formatting
+                  seriesValue = Number(displayValue).toLocaleString();
                 }
                 
                 // For category mode, try to get the actual colour from the data point
@@ -1755,15 +1794,18 @@
       // Apply percentage conversion if enabled
       var type = document.getElementById('type').value;
       var isStacked = type === "bar" && document.getElementById('stacked').checked;
-      var isPercentage = type === "bar" && document.getElementById('percentage').checked;
+      var isPercentage = document.getElementById('percentage').checked;
       
       var processedJsonSeries = json.series;
-      if (isPercentage && isStacked) {
-        processedJsonSeries = convertToPercentages(json.series, json.categories);
-        console.log('Applied percentage conversion to data');
-      } else if (isPercentage && !isStacked) {
-        // Percentage only makes sense for stacked charts - ignore if not stacked
-        console.warn('Percentage mode ignored - requires stacked to be enabled');
+      if (isPercentage) {
+        if (type === 'bar' && !isStacked) {
+          // Percentage only makes sense for stacked bar charts
+          console.warn('Percentage mode ignored for non-stacked bars');
+        } else {
+          // Apply percentage conversion to all chart types when percentage is enabled
+          processedJsonSeries = convertToPercentages(json.series, json.categories);
+          console.log('Applied percentage conversion to', type, 'chart');
+        }
       }
       
       // Get colour assignment mode
@@ -1957,7 +1999,7 @@
       options.legend.show = showLegend;
 
       // Add percentage state to chart configuration for tooltip access
-      options.isPercentage = isPercentage && isStacked;
+      options.isPercentage = isPercentage;
 
       var el = document.getElementById('preview');
       el.innerHTML = '';
@@ -2140,8 +2182,13 @@
       } else if (chartType === 'line') {
         horizontalRow.style.display = 'none';
         stackedRow.style.display = 'none';
-        percentageRow.style.display = 'none';
+        percentageRow.style.display = 'flex'; // Show percentage for line charts
         markerSizeRow.style.display = 'flex';
+      } else if (chartType === 'area') {
+        horizontalRow.style.display = 'none';
+        stackedRow.style.display = 'none';
+        percentageRow.style.display = 'flex'; // Show percentage for area charts
+        markerSizeRow.style.display = 'none';
       } else {
         horizontalRow.style.display = 'none';
         stackedRow.style.display = 'none';
@@ -2155,6 +2202,33 @@
 
     // Chart type event listener
     document.getElementById('type').addEventListener('change', handleChartTypeChange);
+
+    // Data labels colour toggle event listener
+    document.getElementById('showDataLabels').addEventListener('change', function() {
+      const dataLabelColourRow = document.getElementById('dataLabelColourRow');
+      if (this.checked) {
+        dataLabelColourRow.style.display = 'flex';
+      } else {
+        dataLabelColourRow.style.display = 'none';
+      }
+    });
+
+    // Show colour toggle on page load if data labels are already enabled
+    document.addEventListener('DOMContentLoaded', function() {
+      const showDataLabelsCheckbox = document.getElementById('showDataLabels');
+      const dataLabelColourRow = document.getElementById('dataLabelColourRow');
+      if (showDataLabelsCheckbox.checked) {
+        dataLabelColourRow.style.display = 'flex';
+      }
+    });
+
+    // White data labels toggle event listener
+    document.getElementById('whiteDataLabels').addEventListener('change', function() {
+      // Re-render chart when colour toggle changes
+      if (chart) {
+        render();
+      }
+    });
 
     document.getElementById('render').addEventListener('click', render);
 

@@ -587,8 +587,17 @@
         </div>
 
         <div class="row">
-          <label>Highlight mode</label>
-          <select id="colourMode">
+          <label>Colour by</label>
+          <select id="colourBy">
+            <option value="series">Series</option>
+            <option value="category">Category</option>
+          </select>
+        </div>
+
+        <div class="row">
+          <label>Highlight</label>
+          <select id="highlightMode">
+            <option value="none">None</option>
             <option value="series">Series</option>
             <option value="category">Category</option>
           </select>
@@ -830,6 +839,12 @@
     function renderTable() {
       const tableBody = document.getElementById('tableBody');
       const headerRow = document.getElementById('headerRow');
+      const colourBy = document.getElementById('colourBy').value;
+      const highlightMode = document.getElementById('highlightMode').value;
+      
+      // Progressive disclosure: only show colour pickers when highlighting is enabled
+      const showSeriesPickers = (highlightMode === 'series');
+      const showCategoryPickers = (highlightMode === 'category');
       
       // Clear existing content
       tableBody.innerHTML = '';
@@ -849,46 +864,49 @@
         input.value = series.name || '';
         input.addEventListener('input', syncTableToJson);
         
-        // Series colour picker
-        const colourPicker = document.createElement('div');
-        colourPicker.className = 'series-colour-picker';
-        colourPicker.dataset.seriesIndex = index;
-        colourPicker.title = 'Click to set override colour, double-click to clear override';
-        
-        // Only show colour if it's an override (individual series colour set)
-        if (series.color && series.color.trim() !== '') {
-          colourPicker.classList.add('has-colour');
-          colourPicker.style.setProperty('--series-colour', series.color);
-          colourPicker.textContent = '✓';
-        } else {
-          colourPicker.classList.remove('has-colour');
-          colourPicker.textContent = '●';
+        // Series colour picker - only show when highlighting series
+        let colourPicker = null;
+        if (showSeriesPickers) {
+          colourPicker = document.createElement('div');
+          colourPicker.className = 'series-colour-picker';
+          colourPicker.dataset.seriesIndex = index;
+          colourPicker.title = 'Click to set override colour, double-click to clear override';
+          
+          // Only show colour if it's an override (individual series colour set)
+          if (series.color && series.color.trim() !== '') {
+            colourPicker.classList.add('has-colour');
+            colourPicker.style.setProperty('--series-colour', series.color);
+            colourPicker.textContent = '✓';
+          } else {
+            colourPicker.classList.remove('has-colour');
+            colourPicker.textContent = '●';
+          }
+          
+          // Hidden colour input
+          const colourInput = document.createElement('input');
+          colourInput.type = 'color';
+          colourInput.className = 'series-colour-input';
+          colourInput.setAttribute('list', 'presetColours');
+          colourInput.value = series.color && series.color.trim() !== '' ? series.color : '#000000';
+          colourInput.addEventListener('change', function() {
+            const seriesIdx = parseInt(colourPicker.dataset.seriesIndex);
+            console.log('Colour input changed for series:', seriesIdx, 'new value:', this.value);
+            updateSeriesColour(seriesIdx, this.value);
+          });
+          
+          colourPicker.addEventListener('click', function(e) {
+            e.stopPropagation();
+            colourInput.click();
+          });
+          
+          // Double-click to clear override and return to global palette
+          colourPicker.addEventListener('dblclick', function(e) {
+            e.stopPropagation();
+            updateSeriesColour(index, '');
+          });
+          
+          colourPicker.appendChild(colourInput);
         }
-        
-        // Hidden colour input
-        const colourInput = document.createElement('input');
-        colourInput.type = 'color';
-        colourInput.className = 'series-colour-input';
-        colourInput.setAttribute('list', 'presetColours');
-        colourInput.value = series.color && series.color.trim() !== '' ? series.color : '#000000';
-        colourInput.addEventListener('change', function() {
-          const seriesIdx = parseInt(colourPicker.dataset.seriesIndex);
-          console.log('Colour input changed for series:', seriesIdx, 'new value:', this.value);
-          updateSeriesColour(seriesIdx, this.value);
-        });
-        
-        colourPicker.addEventListener('click', function(e) {
-          e.stopPropagation();
-          colourInput.click();
-        });
-        
-        // Double-click to clear override and return to global palette
-        colourPicker.addEventListener('dblclick', function(e) {
-          e.stopPropagation();
-          updateSeriesColour(index, '');
-        });
-        
-        colourPicker.appendChild(colourInput);
         
         // Add X button for removing column (but not for categories column)
         const removeBtn = document.createElement('button');
@@ -901,7 +919,9 @@
         });
         
         th.appendChild(input);
-        th.appendChild(colourPicker);
+        if (colourPicker) {
+          th.appendChild(colourPicker);
+        }
         th.appendChild(removeBtn);
         
         headerRow.appendChild(th);
@@ -935,54 +955,56 @@
         categoryInput.addEventListener('input', syncTableToJson);
         categoryCell.appendChild(categoryInput);
         
-        // Category colour picker
-        const categoryColourPicker = document.createElement('div');
-        categoryColourPicker.className = 'category-colour-picker';
-        categoryColourPicker.dataset.categoryIndex = i;
-        categoryColourPicker.title = 'Click to set category colour, double-click to clear';
-        
-        // Set initial colour
-        const categoryColour = currentData.categoryColours && currentData.categoryColours[i] ? currentData.categoryColours[i] : '';
-        if (categoryColour && categoryColour.trim() !== '') {
-          categoryColourPicker.classList.add('has-colour');
-          categoryColourPicker.style.setProperty('--category-colour', categoryColour);
-          categoryColourPicker.textContent = '✓';
-          categoryColourPicker.dataset.colour = categoryColour;
-        } else {
-          categoryColourPicker.classList.remove('has-colour');
-          categoryColourPicker.textContent = '●';
-          categoryColourPicker.dataset.colour = '';
+        // Category colour picker - only show when highlighting categories
+        if (showCategoryPickers) {
+          const categoryColourPicker = document.createElement('div');
+          categoryColourPicker.className = 'category-colour-picker';
+          categoryColourPicker.dataset.categoryIndex = i;
+          categoryColourPicker.title = 'Click to set category colour, double-click to clear';
+          
+          // Set initial colour
+          const categoryColour = currentData.categoryColours && currentData.categoryColours[i] ? currentData.categoryColours[i] : '';
+          if (categoryColour && categoryColour.trim() !== '') {
+            categoryColourPicker.classList.add('has-colour');
+            categoryColourPicker.style.setProperty('--category-colour', categoryColour);
+            categoryColourPicker.textContent = '✓';
+            categoryColourPicker.dataset.colour = categoryColour;
+          } else {
+            categoryColourPicker.classList.remove('has-colour');
+            categoryColourPicker.textContent = '●';
+            categoryColourPicker.dataset.colour = '';
+          }
+          
+          // Hidden colour input
+          const categoryColourInput = document.createElement('input');
+          categoryColourInput.type = 'color';
+          categoryColourInput.className = 'category-colour-input';
+          categoryColourInput.setAttribute('list', 'presetColours');
+          categoryColourInput.value = categoryColour || '#000000';
+          categoryColourInput.addEventListener('change', function() {
+            const categoryIdx = parseInt(categoryColourPicker.dataset.categoryIndex);
+            updateCategoryColour(categoryIdx, this.value);
+          });
+          
+          // Prevent colour input from affecting category input
+          categoryColourInput.addEventListener('input', function(e) {
+            e.stopPropagation();
+          });
+          
+          categoryColourPicker.addEventListener('click', function(e) {
+            e.stopPropagation();
+            categoryColourInput.click();
+          });
+          
+          // Double-click to clear override
+          categoryColourPicker.addEventListener('dblclick', function(e) {
+            e.stopPropagation();
+            updateCategoryColour(i, '');
+          });
+          
+          categoryColourPicker.appendChild(categoryColourInput);
+          categoryCell.appendChild(categoryColourPicker);
         }
-        
-        // Hidden colour input
-        const categoryColourInput = document.createElement('input');
-        categoryColourInput.type = 'color';
-        categoryColourInput.className = 'category-colour-input';
-        categoryColourInput.setAttribute('list', 'presetColours');
-        categoryColourInput.value = categoryColour || '#000000';
-        categoryColourInput.addEventListener('change', function() {
-          const categoryIdx = parseInt(categoryColourPicker.dataset.categoryIndex);
-          updateCategoryColour(categoryIdx, this.value);
-        });
-        
-        // Prevent colour input from affecting category input
-        categoryColourInput.addEventListener('input', function(e) {
-          e.stopPropagation();
-        });
-        
-        categoryColourPicker.addEventListener('click', function(e) {
-          e.stopPropagation();
-          categoryColourInput.click();
-        });
-        
-        // Double-click to clear override
-        categoryColourPicker.addEventListener('dblclick', function(e) {
-          e.stopPropagation();
-          updateCategoryColour(i, '');
-        });
-        
-        categoryColourPicker.appendChild(categoryColourInput);
-        categoryCell.appendChild(categoryColourPicker);
         row.appendChild(categoryCell);
 
         // Series data cells
@@ -1212,16 +1234,19 @@
     document.getElementById('addColumn').addEventListener('click', addColumn);
     document.getElementById('addRow').addEventListener('click', addRow);
 
-    // Colour mode change handler
-    function handleColourModeChange() {
-      const colourMode = document.getElementById('colourMode').value;
+    // Colour by change handler
+    function handleColourByChange() {
+      const colourBy = document.getElementById('colourBy').value;
       
       // Ensure categoryColours array exists for category mode
-      if (colourMode === 'category') {
+      if (colourBy === 'category') {
         if (!currentData.categoryColours) {
           currentData.categoryColours = new Array(currentData.categories.length).fill('');
         }
       }
+      
+      // Re-render table to show/hide appropriate colour pickers
+      renderTable();
       
       // Update theme selection based on current state
       const currentTheme = detectCurrentTheme();
@@ -1230,8 +1255,20 @@
       }
     }
 
-    // Colour mode event listener
-    document.getElementById('colourMode').addEventListener('change', handleColourModeChange);
+    // Highlight mode change handler
+    function handleHighlightModeChange() {
+      const highlightMode = document.getElementById('highlightMode').value;
+      console.log('Highlight mode changed to:', highlightMode);
+      
+      // Re-render table to show/hide colour pickers based on highlight mode
+      renderTable();
+      
+      // TODO: Implement visual highlighting effects in future
+    }
+
+    // Event listeners
+    document.getElementById('colourBy').addEventListener('change', handleColourByChange);
+    document.getElementById('highlightMode').addEventListener('change', handleHighlightModeChange);
 
     // Theme change event listener
     document.getElementById('chartTheme').addEventListener('change', function() {
@@ -1354,11 +1391,20 @@
     // Initialize table on page load
     renderTable();
 
-    // Initialize chart type handler to set initial state
-    handleChartTypeChange();
+    // Initialize controls with proper defaults
+    function initializeControls() {
+      // Set defaults
+      document.getElementById('colourBy').value = 'series';
+      document.getElementById('highlightMode').value = 'none';
+      
+      // Initialize handlers
+      handleChartTypeChange();
+      handleColourByChange();
+      handleHighlightModeChange();
+    }
     
-    // Initialize colour mode handler to set initial state
-    handleColourModeChange();
+    // Initialize controls when page loads
+    initializeControls();
 
     var chart = null;
 
@@ -1652,17 +1698,18 @@
 
       var options = baseOptions();
       
-      // Get colour mode
-      var colourMode = document.getElementById('colourMode').value;
+      // Get colour assignment mode
+      var colourBy = document.getElementById('colourBy').value;
+      var highlightMode = document.getElementById('highlightMode').value;
       
-      // Process series based on colour mode
+      // Process series based on colour assignment mode
       var processedSeries = json.series.map(function(series, index) {
         var processedSeries = {
           name: series.name,
           data: series.data
         };
         
-        if (colourMode === 'category') {
+        if (colourBy === 'category') {
           // Category mode: don't set individual series colours
           // We'll handle category colours at the chart level
         } else {
@@ -1701,8 +1748,57 @@
       
       options.series = processedSeries;
       
-      // Handle category colours if in category mode
-      if (colourMode === 'category' && json.categoryColours && json.categoryColours.length > 0) {
+      // Apply category colour overrides when category highlighting is enabled
+      // This should run REGARDLESS of colourBy setting
+      if (highlightMode === 'category' && json.categoryColours && json.categoryColours.length > 0) {
+        console.log('Applying category colour overrides due to category highlighting');
+        
+        // Transform all series to use category-based colouring
+        options.series = options.series.map(function(series, seriesIndex) {
+          var newSeries = {
+            name: series.name,
+            data: series.data.map(function(value, dataIndex) {
+              var categoryColour = json.categoryColours[dataIndex];
+              
+              if (categoryColour && categoryColour.trim() !== '') {
+                // Use the category override colour
+                var baseColour = categoryColour;
+                console.log('Using category override colour for', json.categories[dataIndex], ':', baseColour);
+              } else {
+                // Fall back to series colour (which may be tinted)
+                var baseColour = series.color || options.colors[seriesIndex % options.colors.length];
+                console.log('Using series colour for', json.categories[dataIndex], ':', baseColour);
+              }
+              
+              // Apply series-level tinting to the base colour if we're using series colouring
+              var finalColour = baseColour;
+              if (colourBy === 'series') {
+                var currentTheme = document.getElementById('chartTheme').value;
+                var singleColourThemes = ['neutral', 'brand', 'secondary'];
+                var isSingleColourTheme = singleColourThemes.includes(currentTheme);
+                var totalSeries = json.series.length;
+                
+                if (isSingleColourTheme && totalSeries > 1) {
+                  var tintAmount = (seriesIndex / (totalSeries - 1)) * 0.7;
+                  finalColour = tintColour(baseColour, tintAmount);
+                  console.log('Applied', Math.round(tintAmount * 100) + '% tint to category override:', finalColour);
+                }
+              }
+              
+              return {
+                x: json.categories[dataIndex],
+                y: value,
+                fillColor: finalColour
+              };
+            })
+          };
+          return newSeries;
+        });
+        
+        console.log('Category highlighting mode - applied category overrides with series tinting');
+      }
+      // Original category colouring logic for when colourBy === 'category'
+      else if (colourBy === 'category' && json.categoryColours && json.categoryColours.length > 0) {
         // For category mode, we'll modify each series to have data points with individual colours
         options.series = options.series.map(function(series, seriesIndex) {
           var newSeries = {
@@ -1729,7 +1825,7 @@
           return newSeries;
         });
         
-        console.log('Category mode - modified series with individual colours');
+        console.log('Category colouring mode - standard category colour application');
       }
       
       // For horizontal bar charts, categories go on y-axis, data values on x-axis
@@ -1775,7 +1871,7 @@
         console.log('Assigned categories to yaxis:', options.yaxis.categories);
         console.log('Transformed series data for horizontal chart:', options.series);
         console.log('Category mode and horizontal chart - data format check:', {
-          colourMode: colourMode,
+          colourBy: colourBy,
           isHorizontal: isHorizontal,
           firstSeriesData: options.series[0] ? options.series[0].data.slice(0, 3) : 'no series'
         });

@@ -544,9 +544,13 @@
           <input id="percentage" type="checkbox" checked />
         </div>
 
-        <div class="row" id="markerSizeRow" style="display: none;">
-          <label for="markerSize">Marker size</label>
-          <input id="markerSize" type="number" placeholder="6" min="0" max="20" />
+        <div class="row" id="markerStyleRow" style="display: none;">
+          <label for="markerStyle">Marker style</label>
+          <select id="markerStyle">
+            <option value="none">None</option>
+            <option value="uniform" selected>Uniform</option>
+            <option value="shape">Shape</option>
+          </select>
         </div>
 
         <div class="row">
@@ -1405,6 +1409,41 @@
         return (rounded % 1 === 0) ? Math.round(rounded).toString() : rounded.toString();
       }
     }
+
+    function getMarkerConfiguration() {
+      var markerStyle = document.getElementById('markerStyle').value;
+      var type = document.getElementById('type').value;
+      
+      // Only apply markers to line and area charts
+      if (type !== 'line' && type !== 'area') {
+        return { size: 0 };
+      }
+      
+      switch (markerStyle) {
+        case 'none':
+          return { size: 0 };
+          
+        case 'uniform':
+          return { 
+            size: 6,
+            shape: 'circle',
+            strokeWidth: 2,
+            strokeColors: "#fff"
+          };
+          
+        case 'shape':
+          // For shape mode, we'll set the shape array in the render function
+          return {
+            size: 6,
+            strokeWidth: 2,
+            strokeColors: "#fff"
+            // shape will be set as array in render function
+          };
+          
+        default:
+          return { size: 6 };
+      }
+    }
     
     // Set initial theme based on current palette (after BRAND is defined)
     const currentTheme = detectCurrentTheme();
@@ -1420,6 +1459,7 @@
       // Set defaults
       document.getElementById('colourBy').value = 'series';
       document.getElementById('highlightMode').value = 'none';
+      document.getElementById('markerStyle').value = 'uniform'; // New default
       
       // Initialize handlers
       handleChartTypeChange();
@@ -1571,7 +1611,7 @@
           }
         },
         stroke: { width: (type === "bar" ? 0 : 2), lineCap: "round", curve: "smooth" },
-        markers: { size: ((type === "line" || type === "area") ? (parseInt(document.getElementById('markerSize').value, 10) || 5) : 0), strokeWidth: 2, strokeColors: "#fff" },
+        markers: getMarkerConfiguration(),
 
         plotOptions: {
           bar: { 
@@ -1992,6 +2032,30 @@
         console.log('Assigned categories to xaxis:', options.xaxis.categories);
       }
       
+      // Handle shape-based markers using ApexCharts shape array
+      var markerStyle = document.getElementById('markerStyle').value;
+      if (markerStyle === 'shape' && (type === 'line' || type === 'area')) {
+        // All supported ApexCharts marker shapes
+        var shapes = ['circle', 'square', 'plus', 'cross', 'star', 'sparkle', 'diamond', 'triangle'];
+        
+        // Create shape array based on number of series
+        var shapeArray = [];
+        for (var i = 0; i < options.series.length; i++) {
+          shapeArray.push(shapes[i % shapes.length]);
+        }
+        
+        // Apply shape array to markers configuration
+        options.markers.shape = shapeArray;
+        
+        console.log('Applied shape array to markers:', shapeArray);
+        console.log('Series count:', options.series.length);
+        
+        // Log the mapping for debugging
+        options.series.forEach(function(series, index) {
+          console.log(`Series "${series.name}" (${index}): ${shapeArray[index]} shape`);
+        });
+      }
+      
       // Show legend based on user preference and data
       var legendCheckbox = document.getElementById('showLegend').checked;
       var hasMultipleSeriesOrNames = json.series.length > 1 || (json.series.length === 1 && json.series[0].name);
@@ -2172,28 +2236,28 @@
       var horizontalRow = document.getElementById('horizontalToggleRow');
       var stackedRow = document.getElementById('stackedToggleRow');
       var percentageRow = document.getElementById('percentageToggleRow');
-      var markerSizeRow = document.getElementById('markerSizeRow');
+      var markerStyleRow = document.getElementById('markerStyleRow');
       
       if (chartType === 'bar') {
         horizontalRow.style.display = 'flex';
         stackedRow.style.display = 'flex';
         percentageRow.style.display = 'flex';
-        markerSizeRow.style.display = 'none';
+        markerStyleRow.style.display = 'none';
       } else if (chartType === 'line') {
         horizontalRow.style.display = 'none';
         stackedRow.style.display = 'none';
         percentageRow.style.display = 'flex'; // Show percentage for line charts
-        markerSizeRow.style.display = 'flex';
+        markerStyleRow.style.display = 'flex';
       } else if (chartType === 'area') {
         horizontalRow.style.display = 'none';
         stackedRow.style.display = 'none';
         percentageRow.style.display = 'flex'; // Show percentage for area charts
-        markerSizeRow.style.display = 'none';
+        markerStyleRow.style.display = 'flex';
       } else {
         horizontalRow.style.display = 'none';
         stackedRow.style.display = 'none';
         percentageRow.style.display = 'none';
-        markerSizeRow.style.display = 'none';
+        markerStyleRow.style.display = 'none';
       }
     }
 

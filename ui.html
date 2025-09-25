@@ -580,8 +580,6 @@
             <option value="brand">Brand (all red)</option>
             <option value="secondary">Secondary (all blue)</option>
             <option value="categorical">Categorical (multi-colour)</option>
-            <option value="sequential-brand">Sequential Brand (red gradient)</option>
-            <option value="sequential-secondary">Sequential Secondary (blue gradient)</option>
             <option value="diverging-1">Diverging 1 (red to green)</option>
             <option value="diverging-2">Diverging 2 (green to red)</option>
             <option value="diverging-3">Diverging 3 (red to blue)</option>
@@ -669,7 +667,7 @@
         parent.postMessage({ 
           pluginMessage: { 
             type: 'resize-window', 
-            width: 1200, 
+            width: 1440, 
             height: 800 
           } 
         }, '*');
@@ -1025,8 +1023,6 @@
     function updateSeriesColour(seriesIndex, colour) {
       console.log('updateSeriesColour called:', seriesIndex, colour);
       if (currentData.series[seriesIndex]) {
-        // Set the individual series colour (this overrides the global palette)
-        // If colour is empty or default, clear the override
         if (colour && colour.trim() !== '' && colour !== '#000000') {
           currentData.series[seriesIndex].color = colour;
           console.log('Set series', seriesIndex, 'colour to:', colour);
@@ -1038,10 +1034,8 @@
         // Update the colour picker display without re-rendering the entire table
         const colourPicker = document.querySelector(`[data-series-index="${seriesIndex}"]`);
         if (colourPicker) {
-          // Get the existing colour input before updating content
           const existingColourInput = colourPicker.querySelector('.series-colour-input');
           
-          // Only show as having colour if it's a real override
           if (currentData.series[seriesIndex].color && currentData.series[seriesIndex].color.trim() !== '') {
             colourPicker.classList.add('has-colour');
             colourPicker.style.setProperty('--series-colour', currentData.series[seriesIndex].color);
@@ -1051,14 +1045,12 @@
             colourPicker.textContent = '●';
           }
           
-          // Re-append the colour input if it existed
           if (existingColourInput) {
             existingColourInput.value = currentData.series[seriesIndex].color || '#000000';
             colourPicker.appendChild(existingColourInput);
           }
         }
         
-        // Always sync to JSON to ensure persistence when switching tabs
         syncTableToJson();
         
         // Update theme selection based on current state
@@ -1167,7 +1159,7 @@
       if (THEMES[themeName]) {
         BRAND.palette = THEMES[themeName];
         
-        // Clear all individual series and category colour overrides
+        // Clear all individual series and category colour overrides (existing behaviour)
         currentData.series.forEach(series => {
           series.color = '';
         });
@@ -1176,7 +1168,7 @@
           currentData.categoryColours.fill('');
         }
         
-        console.log('Applied theme:', themeName, 'with palette:', BRAND.palette);
+        console.log('Applied theme:', themeName, 'with base palette:', BRAND.palette);
         
         // Re-render table to show updated colours
         renderTable();
@@ -1196,10 +1188,20 @@
         return null; // Individual colours override theme detection
       }
       
-      // Check each theme
+      // Check each theme - including checking if current palette is a tinted version
       for (const [themeName, themePalette] of Object.entries(THEMES)) {
+        // Exact match
         if (JSON.stringify(currentPalette) === JSON.stringify(themePalette)) {
           return themeName;
+        }
+        
+        // Check if current palette is a tinted version of a single-colour theme
+        const singleColourThemes = ['neutral', 'brand', 'secondary'];
+        if (singleColourThemes.includes(themeName) && themePalette.length === 1) {
+          // Check if first colour of current palette matches base colour of theme
+          if (currentPalette.length > 0 && currentPalette[0] === themePalette[0]) {
+            return themeName;
+          }
         }
       }
       
@@ -1265,12 +1267,83 @@
       brand: ["#EB0800"],
       secondary: ["#0A6EFA"],
       categorical: ["#E11D48", "#7D7D83", "#22C55E", "#F59E0B", "#8B5CF6", "#10B981", "#F43F5E"],
-      "sequential-brand": ["#FF6B6B", "#FF5252", "#EB0800", "#D32F2F", "#C62828"],
-      "sequential-secondary": ["#64B5F6", "#42A5F5", "#0A6EFA", "#1976D2", "#1565C0"],
       "diverging-1": ["#EB0800", "#FF9800", "#FFEB3B", "#8BC34A", "#4CAF50"],
       "diverging-2": ["#4CAF50", "#8BC34A", "#FFEB3B", "#FF9800", "#EB0800"],
       "diverging-3": ["#EB0800", "#E91E63", "#9C27B0", "#673AB7", "#0A6EFA"]
     };
+
+    // ── Tinting utility functions ─────────────────────────────────────────────
+    function generateTintedPalette(baseColour, seriesCount) {
+      if (seriesCount <= 1) return [baseColour];
+      
+      // Convert hex to RGB
+      function hexToRgb(hex) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+          r: parseInt(result[1], 16),
+          g: parseInt(result[2], 16),
+          b: parseInt(result[3], 16)
+        } : null;
+      }
+      
+      // Convert RGB to hex
+      function rgbToHex(r, g, b) {
+        return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+      }
+      
+      // Tint function (mix with white)
+      function tintColour(colour, amount) {
+        const rgb = hexToRgb(colour);
+        if (!rgb) return colour;
+        
+        const r = Math.round(rgb.r + (255 - rgb.r) * amount);
+        const g = Math.round(rgb.g + (255 - rgb.g) * amount);
+        const b = Math.round(rgb.b + (255 - rgb.b) * amount);
+        
+        return rgbToHex(r, g, b);
+      }
+      
+      const palette = [];
+      
+      // First series gets the base colour
+      palette.push(baseColour);
+      
+      // Calculate tinting steps
+      const maxTint = 0.7; // Maximum 70% tint for lightest shade
+      const tintStep = maxTint / (seriesCount - 1);
+      
+      // Generate progressively lighter shades
+      for (let i = 1; i < seriesCount; i++) {
+        const tintAmount = tintStep * i;
+        palette.push(tintColour(baseColour, tintAmount));
+      }
+      
+      return palette;
+    }
+
+    function tintColour(colour, amount) {
+      function hexToRgb(hex) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+          r: parseInt(result[1], 16),
+          g: parseInt(result[2], 16),
+          b: parseInt(result[3], 16)
+        } : null;
+      }
+      
+      function rgbToHex(r, g, b) {
+        return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+      }
+      
+      const rgb = hexToRgb(colour);
+      if (!rgb) return colour;
+      
+      const r = Math.round(rgb.r + (255 - rgb.r) * amount);
+      const g = Math.round(rgb.g + (255 - rgb.g) * amount);
+      const b = Math.round(rgb.b + (255 - rgb.b) * amount);
+      
+      return rgbToHex(r, g, b);
+    }
     
     // Set initial theme based on current palette (after BRAND is defined)
     const currentTheme = detectCurrentTheme();
@@ -1593,20 +1666,33 @@
           // Category mode: don't set individual series colours
           // We'll handle category colours at the chart level
         } else {
-          // Series mode: traditional series-based colouring
-          // Check if any series has individual colours set
-          var hasIndividualColours = json.series.some(series => series.color && series.color.trim() !== '');
+          // Series mode: apply tinting to both palette and override colours
+          var baseColour;
           
-          // If series has a custom colour, add it to the series object
+          // Determine base colour (override or palette)
           if (series.color && series.color.trim() !== '') {
-            processedSeries.color = series.color;
-            console.log('Setting individual colour for series', index, ':', series.color);
+            baseColour = series.color;
+            console.log('Using override colour as base for series', index, ':', baseColour);
           } else {
-            // For series without individual colours, explicitly set the palette colour
-            // to prevent ApexCharts from using its default palette
             var paletteIndex = index % options.colors.length;
-            processedSeries.color = options.colors[paletteIndex];
-            console.log('Setting palette colour for series', index, ':', options.colors[paletteIndex], 'from palette index', paletteIndex);
+            baseColour = options.colors[paletteIndex];
+            console.log('Using palette colour as base for series', index, ':', baseColour);
+          }
+          
+          // Apply tinting if we're using a single-colour theme and have multiple series
+          var currentTheme = document.getElementById('chartTheme').value;
+          var singleColourThemes = ['neutral', 'brand', 'secondary'];
+          var isSingleColourTheme = singleColourThemes.includes(currentTheme);
+          var totalSeries = json.series.length;
+          
+          if (isSingleColourTheme && totalSeries > 1) {
+            // Apply tinting based on series position
+            var tintAmount = (index / (totalSeries - 1)) * 0.7; // 0 to 70% tint
+            processedSeries.color = tintColour(baseColour, tintAmount);
+            console.log('Applied', Math.round(tintAmount * 100) + '% tint to series', index, ':', processedSeries.color);
+          } else {
+            // No tinting - use base colour as-is
+            processedSeries.color = baseColour;
           }
         }
         
